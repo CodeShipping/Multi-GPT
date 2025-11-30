@@ -24,6 +24,17 @@ MultiGPT brings the power of multiple AI models to your Android device. Chat wit
 - 🎨 Beautiful Material You design with dynamic theming
 - 🔧 Advanced configuration options for power users
 
+## 📸 Screenshots
+
+<div align="center">
+
+|                            Getting Started                            |                         Multi-Model Settings                          |                          Individual Settings                          |
+|:---------------------------------------------------------------------:|:---------------------------------------------------------------------:|:---------------------------------------------------------------------:|
+| <img src="metadata/en-US/images/phoneScreenshots/1.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/2.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/3.png" width="200"/> |
+|                      **Dynamic Model Selection**                      |                           **System Prompt**                           |                            **Chat Screen**                            |
+| <img src="metadata/en-US/images/phoneScreenshots/4.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/5.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/6.png" width="200"/> |
+</div>
+
 ## ✨ Key Features
 
 ### 🤖 Multi-Model Support
