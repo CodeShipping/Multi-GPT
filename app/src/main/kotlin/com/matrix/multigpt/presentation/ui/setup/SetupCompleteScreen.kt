@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -26,6 +27,7 @@ import com.matrix.multigpt.R
 import com.matrix.multigpt.presentation.common.PrimaryLongButton
 import com.matrix.multigpt.presentation.common.Route
 import com.matrix.multigpt.presentation.icons.Done
+import com.matrix.multigpt.util.AdMobManager
 
 @Composable
 fun SetupCompleteScreen(
@@ -37,6 +39,8 @@ fun SetupCompleteScreen(
 ) {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp.dp
+    val context = LocalContext.current
+    val activity = context as? android.app.Activity
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
@@ -60,7 +64,15 @@ fun SetupCompleteScreen(
                 onClick = {
                     setupViewModel.savePlatformState()
                     val nextStep = setupViewModel.getNextSetupRoute(currentRoute)
-                    onNavigate(nextStep)
+                    
+                    // Show interstitial ad after setup completion
+                    activity?.let { act ->
+                        AdMobManager.showInterstitialAd(act, R.string.setup_complete_interstitial) {
+                            onNavigate(nextStep)
+                        }
+                    } ?: run {
+                        onNavigate(nextStep)
+                    }
                 },
                 text = stringResource(R.string.done)
             )

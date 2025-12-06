@@ -114,6 +114,9 @@ dependencies {
     // Serialization
     implementation(libs.kotlin.serialization)
 
+    // AdMob
+    implementation(libs.play.services.ads)
+
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

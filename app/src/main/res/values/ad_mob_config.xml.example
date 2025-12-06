@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AdMob Configuration Template -->
+    <!-- Copy this file to ad_mob_config.xml and replace with your actual AdMob ad unit IDs -->
+    <!-- The ad_mob_config.xml file is gitignored to keep your ad IDs secure -->
+    
+    <!-- Your AdMob App ID -->
+    <string name="admob_app_id">ca-app-pub-XXXXXXXXXXXXXXXX~XXXXXXXXXX</string>
+    
+    <!-- Banner ad for home screen (chat list) -->
+    <string name="home_banner">ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX</string>
+    
+    <!-- Interstitial ad shown after setup completion -->
+    <string name="setup_complete_interstitial">ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX</string>
+    
+    <!-- Banner ad for settings screens -->
+    <string name="settings_banner">ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX</string>
+    
+    <!-- Native ad for future use -->
+    <string name="native_ad">ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX</string>
+</resources>

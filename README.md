@@ -118,6 +118,23 @@ Built with industry best practices:
   - [Google AI API Key](https://aistudio.google.com/app/apikey)
   - [Groq API Key](https://console.groq.com/keys)
 
+### AdMob Configuration (Optional)
+If you want to enable ads for monetization:
+1. Create an [AdMob account](https://admob.google.com/)
+2. Create an app and ad units in AdMob console
+3. Create `app/src/main/res/values/ad_mob_config.xml` with your ad unit IDs:
+   ```xml
+   <?xml version="1.0" encoding="utf-8"?>
+   <resources>
+       <string name="admob_app_id">YOUR_ADMOB_APP_ID</string>
+       <string name="home_banner">YOUR_BANNER_AD_UNIT_ID</string>
+       <string name="setup_complete_interstitial">YOUR_INTERSTITIAL_AD_UNIT_ID</string>
+       <string name="settings_banner">YOUR_SETTINGS_BANNER_AD_UNIT_ID</string>
+       <string name="native_ad">YOUR_NATIVE_AD_UNIT_ID</string>
+   </resources>
+   ```
+4. The file is already gitignored to keep your ad IDs secure
+
 ### Installation
 1. Download the latest APK from [Releases](https://github.com/your-repo/releases)
 2. Install the APK on your Android device
@@ -201,6 +218,28 @@ git clone https://github.com/your-repo/multigpt.git
 ./gradlew test
 ```
 
+#### AdMob Development Setup
+For development, test ads are configured by default. To set up your own AdMob ads:
+
+1. **Create AdMob Configuration:**
+   ```bash
+   # Create the config file (it's gitignored by default)
+   cp app/src/main/res/values/ad_mob_config.xml.example app/src/main/res/values/ad_mob_config.xml
+   ```
+
+2. **Configure Ad Unit IDs:**
+   - Replace test IDs in `ad_mob_config.xml` with your AdMob ad unit IDs
+   - Keep test IDs during development to avoid policy violations
+
+3. **Ad Placements:**
+   - **Home Banner**: Bottom-anchored adaptive banner on chat list
+   - **Setup Interstitial**: Shows after completing initial setup
+   - **Settings Banner**: Banner ads in settings screens (configurable)
+
+4. **Testing:**
+   - Use test ad unit IDs during development
+   - Switch to production IDs only for release builds
+
 ### Code Style
 - Follow [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html)
 - Use meaningful variable and function names
@@ -227,7 +266,7 @@ This project is licensed under the terms specified in [LICENSE](./LICENSE).
 
 <div align="center">
 
-**Made with ❤️ for the Android community**
+**Made with ❤️**
 
 [⬆ Back to Top](#multigpt)
 

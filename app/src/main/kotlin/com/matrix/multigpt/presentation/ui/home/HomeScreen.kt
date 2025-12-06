@@ -5,7 +5,9 @@ import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -68,8 +70,11 @@ import com.matrix.multigpt.R
 import com.matrix.multigpt.data.database.entity.ChatRoom
 import com.matrix.multigpt.data.dto.Platform
 import com.matrix.multigpt.data.model.ApiType
+import com.matrix.multigpt.presentation.common.AdaptiveBannerAd
 import com.matrix.multigpt.presentation.common.PlatformCheckBoxItem
+import com.matrix.multigpt.util.AdMobManager
 import com.matrix.multigpt.util.getPlatformTitleResources
+import com.matrix.multigpt.util.PreloadInterstitialAd
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -96,6 +101,9 @@ fun HomeScreen(
             homeViewModel.fetchPlatformStatus()
         }
     }
+
+    // Preload interstitial ad for later use
+    PreloadInterstitialAd()
 
     BackHandler(enabled = chatListState.isSelectionMode) {
         homeViewModel.disableSelectionMode()
@@ -131,6 +139,14 @@ fun HomeScreen(
                     homeViewModel.openSelectModelDialog()
                 }
             })
+        },
+        bottomBar = {
+            // Banner ad pinned to bottom of screen
+            AdaptiveBannerAd(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            )
         }
     ) { innerPadding ->
         LazyColumn(
