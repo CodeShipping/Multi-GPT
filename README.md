@@ -2,304 +2,289 @@
 
 # MultiGPT
 
-**A powerful Android chat client for multiple AI models**
+**Chat with multiple AI models at once**
+
+Connect to OpenAI, Claude, Gemini, AWS Bedrock, and more—all from one powerful Android app.
 
 <p>
   <img alt="Android" src="https://img.shields.io/badge/Platform-Android-green.svg"/>
   <img alt="Kotlin" src="https://img.shields.io/badge/Language-Kotlin-purple.svg"/>
   <img alt="Jetpack Compose" src="https://img.shields.io/badge/UI-Jetpack%20Compose-blue.svg"/>
-  <img alt="License" src="https://img.shields.io/badge/License-See%20LICENSE-orange.svg"/>
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-blue.svg"/>
+</p>
+
+<p>
+  <a href="https://play.google.com/store/apps/details?id=com.matrix.multigpt">
+    <img alt="Get it on Google Play" src="https://img.shields.io/badge/Get%20it%20on-Google%20Play-brightgreen.svg?logo=googleplay"/>
+  </a>
 </p>
 
 </div>
 
-## 📱 Overview
+## 🚀 What is MultiGPT?
 
-MultiGPT brings the power of multiple AI models to your Android device. Chat with OpenAI, Anthropic, Google, and more—all from a single, privacy-focused interface built with modern Android development practices.
+MultiGPT is a native Android app that lets you chat with multiple AI models simultaneously. Instead of switching between different apps and websites, get responses from OpenAI's GPT models, Anthropic's Claude, Google's Gemini, AWS Bedrock's foundation models, and more—all in one conversation.
 
-**Why MultiGPT?**
-- 🚀 Access multiple AI models without switching apps
-- 🔒 Complete privacy - all data stays on your device
-- ⚡ Fast and responsive native Android experience
-- 🎨 Beautiful Material You design with dynamic theming
-- 🔧 Advanced configuration options for power users
+Perfect for comparing AI responses, getting diverse perspectives, or simply enjoying the convenience of having all your favorite AI models in one place.
 
-## 📸 Screenshots
+## 📱 Screenshots
 
 <div align="center">
 
-|                            Getting Started                            |                         Multi-Model Settings                          |                          Individual Settings                          |
-|:---------------------------------------------------------------------:|:---------------------------------------------------------------------:|:---------------------------------------------------------------------:|
-| <img src="metadata/en-US/images/phoneScreenshots/1.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/2.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/3.png" width="200"/> |
-|                      **Dynamic Model Selection**                      |                           **System Prompt**                           |                            **Chat Screen**                            |
-| <img src="metadata/en-US/images/phoneScreenshots/4.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/5.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/6.png" width="200"/> |
+|                            Getting Started                            |                         Multi-Model Chat                          |                          Settings                          |
+|:---------------------------------------------------------------------:|:----------------------------------------------------------------:|:----------------------------------------------------------:|
+| <img src="metadata/en-US/images/phoneScreenshots/1.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/6.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/3.png" width="200"/> |
+
 </div>
 
-## ✨ Key Features
+## ✨ Why Choose MultiGPT?
 
-### 🤖 Multi-Model Support
-Connect to multiple AI platforms simultaneously using official APIs:
+### 🎯 **All-in-One AI Experience**
+Stop juggling multiple apps and websites. MultiGPT brings together the best AI models in one beautiful, native Android interface.
 
-| Provider | Models | Features |
-|----------|--------|----------|
-| **OpenAI** | GPT-4, GPT-4o, GPT-3.5-turbo | Industry-leading language models |
-| **Anthropic** | Claude 3.5 Sonnet, Claude 3 Opus, Haiku | Long context, thoughtful responses |
-| **Google** | Gemini 1.5 Pro, Gemini 1.5 Flash | Fast, versatile AI models |
-| **Groq** | Llama 3.1, Gemma 2 | Ultra-fast inference |
-| **Ollama** | Any local model | Run AI models locally on your network |
-| **Custom** | Any OpenAI-compatible API | Support for custom endpoints |
+### 🔒 **Privacy First**  
+Your conversations stay on your device. No accounts, no cloud storage, no data collection. You control your API keys and chat history.
 
-#### 🔄 Dynamic Model Discovery
-- **Automatic Updates**: Fetch the latest available models from each provider
-- **Real-time Sync**: Always have access to newly released models
-- **Smart Fallback**: Seamlessly falls back to curated lists if API is unavailable
-- **Zero Configuration**: Works automatically in setup and settings
+### ⚡ **Built for Android**
+Native Android app with Material You design, dark mode support, and smooth animations. No web wrappers or compromises.
 
-### ⚙️ Advanced Configuration
-Fine-tune your AI interactions with granular control:
+### 🌍 **Global Ready**
+Available in 10+ languages including English, Arabic, Chinese, Korean, Russian, and more. Truly accessible worldwide.
 
-- **Temperature Control** (0.0-2.0): Adjust response randomness
-  - Low (0.0-0.5): Focused, deterministic responses
-  - Medium (0.5-1.0): Balanced creativity and consistency
-  - High (1.0-2.0): More creative and diverse outputs
+## 🤖 Supported AI Platforms
 
-- **Top-p / Nucleus Sampling** (0.1-1.0): Control response diversity
-  - Use for alternative to temperature control
-  - Fine-tune which tokens the model considers
+### **OpenAI** 
+*The creators of ChatGPT*
+- **Models**: GPT-4o, GPT-4o mini, GPT-4 Turbo, GPT-4
+- **Best for**: General tasks, coding, creative writing
+- **Dynamic fetching**: Latest models automatically discovered
 
-- **Custom System Prompts**: Define AI behavior and personality
-  - Set role and context for the AI
-  - Maintain consistent behavior across conversations
-  - Model-specific optimization
+### **Groq**
+*Lightning-fast AI inference*  
+- **Models**: Llama 3.1, Llama 3.2, Gemma 2
+- **Best for**: Quick responses, real-time applications
+- **Speed**: Ultra-fast inference with open-source models
 
-- **Per-Model Settings**: Different configurations for each provider
-  - Save time with provider-specific defaults
-  - Optimize for each model's strengths
+### **AWS Bedrock**
+*Enterprise foundation models*
+- **Providers**: Anthropic, Amazon, AI21 Labs, Cohere, Meta
+- **Models**: 12+ foundation models including Claude, Titan, Jurassic-2, Command, Llama 2
+- **Best for**: Enterprise applications, diverse model access
+- **Setup**: Simple 4-field credential form with region selection
 
-### 🔐 Privacy First
-Your data belongs to you:
+### **Anthropic**
+*Home of Claude*
+- **Models**: Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Sonnet, Claude 3 Haiku  
+- **Best for**: Long-form writing, analysis, thoughtful responses
+- **Strength**: Large context windows, nuanced understanding
 
-- ✅ **Local Storage**: All chat history stored locally on your device
-- ✅ **No Analytics**: Zero data collection or tracking
-- ✅ **Direct Communication**: API calls go directly to providers
-- ✅ **No Account Required**: Use your own API keys
-- ✅ **Offline History**: Access past conversations without internet
-- ✅ **Easy Export**: Export your conversations anytime
+### **Google**
+*Gemini AI models*
+- **Models**: Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini 1.0 Pro
+- **Best for**: Fast responses, coding, multimodal tasks
+- **Integration**: Direct Google AI integration
 
-### 🎨 Modern Android Design
-Built for the modern Android experience:
+### **Ollama**
+*Run AI locally*
+- **Models**: Any model you can run locally (Llama, Mistral, CodeLlama, etc.)
+- **Best for**: Privacy, custom models, offline usage
+- **Setup**: Connect to your local Ollama instance
 
-- **Material You**: Dynamic theming based on your wallpaper
-- **Dark Mode**: Seamless dark mode support with OLED-friendly blacks
-- **Adaptive Layout**: Optimized for phones and tablets
-- **No Restarts**: Theme changes apply instantly without restarting
-- **Per-App Language**: Choose your language (Android 13+)
-- **Smooth Animations**: Fluid transitions throughout the app
+## 📖 Getting Started
 
-### 🛠️ Technical Excellence
-Built with industry best practices:
+### 📋 **Prerequisites**
+Before you begin, you'll need:
+- Android device with **Android 8.0+** (API level 26+)
+- API keys from the platforms you want to use
 
-- **100% Kotlin**: Modern, concise, and safe
-- **Jetpack Compose**: Declarative UI framework
-- **Single Activity**: Modern navigation architecture
-- **MVVM Pattern**: Clean separation of concerns
-- **Kotlin Coroutines**: Efficient async operations
-- **Ktor Client**: Powerful HTTP client for API calls
-- **Room Database**: Robust local data persistence
-- **Hilt Dependency Injection**: Scalable and testable architecture
+### 🔑 **Getting API Keys**
 
-## 🚀 Getting Started
+**OpenAI** (Most Popular)
+1. Visit [OpenAI Platform](https://platform.openai.com/account/api-keys)
+2. Create account and add billing information  
+3. Generate a new API key
+4. Note: Requires prepaid credits
 
-### Prerequisites
-- Android device or emulator running Android 8.0+ (API 26+)
-- API keys from the providers you want to use:
-  - [OpenAI API Key](https://platform.openai.com/account/api-keys)
-  - [Anthropic API Key](https://console.anthropic.com/settings/keys)
-  - [Google AI API Key](https://aistudio.google.com/app/apikey)
-  - [Groq API Key](https://console.groq.com/keys)
+**AWS Bedrock** (Enterprise Models)
+1. Create [AWS account](https://aws.amazon.com) and set up IAM user
+2. Attach `AmazonBedrockFullAccess` policy
+3. Generate Access Key ID and Secret Access Key
+4. Choose AWS region (e.g., us-east-1, us-west-2)
+5. Request model access in Bedrock console
 
-### AdMob Configuration (Optional)
-If you want to enable ads for monetization:
-1. Create an [AdMob account](https://admob.google.com/)
-2. Create an app and ad units in AdMob console
-3. Create `app/src/main/res/values/ad_mob_config.xml` with your ad unit IDs:
-   ```xml
-   <?xml version="1.0" encoding="utf-8"?>
-   <resources>
-       <string name="admob_app_id">YOUR_ADMOB_APP_ID</string>
-       <string name="home_banner">YOUR_BANNER_AD_UNIT_ID</string>
-       <string name="setup_complete_interstitial">YOUR_INTERSTITIAL_AD_UNIT_ID</string>
-       <string name="settings_banner">YOUR_SETTINGS_BANNER_AD_UNIT_ID</string>
-       <string name="native_ad">YOUR_NATIVE_AD_UNIT_ID</string>
-   </resources>
-   ```
-4. The file is already gitignored to keep your ad IDs secure
+**Other Providers**
+- **Anthropic**: [Console](https://console.anthropic.com/settings/keys) (requires prepaid credits)
+- **Google**: [AI Studio](https://aistudio.google.com/app/apikey) (free tier available)
+- **Groq**: [Console](https://console.groq.com/keys) (generous free tier)
 
-### Firebase Configuration (Optional)
-If you want to enable analytics and crash reporting:
-1. Create a [Firebase project](https://console.firebase.google.com/)
-2. Add an Android app to your Firebase project
-3. Download `google-services.json` and place it in `app/` directory
-4. The file is already gitignored to keep your Firebase config secure
-5. Enable Analytics and Crashlytics in Firebase console
+### 📲 **Installation & Setup**
 
-### Installation
-1. Download the latest APK from [Releases](https://github.com/your-repo/releases)
-2. Install the APK on your Android device
-3. Open MultiGPT and follow the setup wizard
-4. Enter your API keys and select models
-5. Start chatting!
+1. **Install the App**
+   - Download from [Google Play Store](https://play.google.com/store/apps/details?id=com.matrix.multigpt)
+   - Or get the APK from [GitHub Releases](https://github.com/it5prasoon/MultiGPT/releases)
 
-### First Time Setup
-1. **Select Platforms**: Choose which AI providers you want to use
-2. **Enter API Keys**: Securely store your API keys locally
-3. **Choose Models**: Select default models (or let the app fetch available models)
-4. **Configure Settings** (Optional): Adjust temperature, prompts, etc.
-5. **Start Chatting**: Create your first conversation!
+2. **First Launch Setup**  
+   - Select which AI platforms you want to use
+   - Enter your API keys securely (stored only on your device)
+   - Choose your preferred models
+   - Start chatting immediately!
 
-## 📖 Usage
+3. **Create Your First Chat**
+   - Tap the **+** button to create a new conversation
+   - Select which AI models to include
+   - Ask your question and get responses from multiple AIs simultaneously
 
-### Creating a New Chat
-1. Tap the **+** button on the home screen
-2. Select which AI platforms to include
-3. Start typing your message
-4. The AI responses will appear in real-time
+## ⚙️ Advanced Features
 
-### Switching Models
-1. Go to **Settings**
-2. Select the platform (OpenAI, Anthropic, etc.)
-3. Tap **Model Selection**
-4. Choose from available models or enter a custom model name
-5. Models are automatically fetched from the provider's API
+### 🎛️ **Fine-Tuning AI Responses**
 
-### Adjusting Parameters
-- **Temperature**: Settings → [Platform] → Temperature
-- **Top-p**: Settings → [Platform] → Nucleus Sampling
-- **System Prompt**: Settings → [Platform] → System Prompt
+**Temperature Control**  
+Adjust how creative or focused AI responses are:
+- **0.0-0.3**: Very focused, consistent answers
+- **0.7-1.0**: Balanced creativity (recommended)  
+- **1.5-2.0**: Highly creative, diverse responses
 
-### Managing Conversations
-- **View History**: All conversations saved automatically
-- **Delete Chat**: Long press on a conversation
-- **Export Chat**: Tap the export icon in conversation view
+**Top-p Sampling**  
+Control response diversity alternative to temperature:
+- **0.1-0.5**: More focused vocabulary
+- **0.9-1.0**: Full vocabulary range
 
-## 🗺️ Roadmap
+**System Prompts**  
+Define AI behavior and personality:
+- Set specific roles (e.g., "You are a helpful coding assistant")
+- Provide context and guidelines
+- Different prompts for different use cases
 
-### Coming Soon
-- [ ] Image understanding (multimodal support)
-- [ ] Voice input and output
-- [ ] File attachments and analysis
-- [ ] Conversation branching
-- [ ] Advanced search and filtering
-- [ ] Cloud backup (optional)
-- [ ] Conversation sharing
-- [ ] Widget support
+### 📊 **Model Management**  
 
-### Under Consideration
-- [ ] More AI platform integrations
-- [ ] Collaborative conversations
-- [ ] Plugin system for extensions
-- [ ] Desktop companion app
+**Dynamic Model Discovery**
+The app automatically fetches the latest available models from each provider, ensuring you always have access to the newest AI capabilities without app updates.
 
-Have a feature idea? [Open an issue](https://github.com/your-repo/issues) on GitHub!
+**Smart Fallback System**  
+If dynamic fetching fails, the app uses curated model lists to ensure uninterrupted service.
+
+**Custom Models**  
+For advanced users, enter custom model names that aren't in the standard lists.
+
+### 🎨 **Personalization**
+
+**Material You Theming**  
+The app automatically adapts to your device's color scheme, creating a cohesive experience that feels native to your Android device.
+
+**Multi-Language Support**  
+Choose from 10+ languages including Arabic, Chinese, Korean, Russian, Portuguese, Hebrew, Tamil, Turkish, and more.
+
+## 🛡️ Privacy & Security
+
+### **Your Data, Your Control**
+
+MultiGPT is built with privacy as a core principle. Here's what that means:
+
+**Local Storage Only**
+- All chat conversations are stored locally on your device
+- No cloud synchronization or backup (by design)
+- Your conversations never leave your device unless you explicitly export them
+
+**No Data Collection**  
+- No analytics or tracking
+- No user accounts or profiles
+- No telemetry or usage statistics
+- Zero data sent to our servers
+
+**Direct API Communication**
+- Your API keys communicate directly with AI providers
+- MultiGPT acts only as a client interface
+- No proxy servers or middleware collecting your data
+
+**Open Source Transparency**
+- Full source code available on GitHub
+- Audit the code yourself or have security experts review it
+- Build the app yourself for complete control
+
+## 🏗️ Technical Architecture
+
+### **Modern Android Development**
+
+MultiGPT is built using the latest Android development best practices:
+
+**Architecture Components**
+- **MVVM Pattern**: Clean separation between UI and business logic
+- **Single Activity**: Modern navigation with Jetpack Navigation
+- **Kotlin 100%**: Fully written in Kotlin for safety and conciseness
+- **Jetpack Compose**: Declarative UI framework for smooth, responsive interfaces
+
+**Networking & Data**
+- **Ktor Client**: Robust HTTP client for API communications
+- **Room Database**: Efficient local data persistence
+- **DataStore**: Modern preferences management
+- **Kotlin Coroutines**: Smooth async operations without blocking
+
+**Quality Assurance**
+- **Hilt Dependency Injection**: Testable, scalable architecture
+- **Unit Tests**: Critical functionality covered by tests
+- **Static Analysis**: Code quality maintained with linting tools
+- **Material Design 3**: Follows Google's latest design guidelines
 
 ## 🤝 Contributing
 
-We welcome contributions from the community!
+We'd love your help in making MultiGPT even better!
 
-### Ways to Contribute
-- 🐛 **Report Bugs**: Found a bug? [Create an issue](https://github.com/your-repo/issues)
-- 💡 **Request Features**: Have an idea? Share it with us!
-- 📝 **Improve Documentation**: Help others understand the project
-- 🔧 **Submit Pull Requests**: Fix bugs or add features
-- 🌍 **Translate**: Help localize the app to your language
-- ⭐ **Star the Project**: Show your support!
+### **Quick Ways to Help**
+- ⭐ **Star the repository** to show support
+- 🐛 **Report bugs** you encounter
+- 💡 **Suggest features** you'd like to see
+- 🌍 **Help translate** into your language
+- 📖 **Improve documentation**
 
-### Development Setup
+### **For Developers**
+
+**Getting Started**
 ```bash
-# Clone the repository
-git clone https://github.com/your-repo/multigpt.git
-
-# Open in Android Studio
-# Build and run the app
-
-# Run tests
-./gradlew test
+git clone https://github.com/it5prasoon/MultiGPT.git
+cd MultiGPT
+# Open in Android Studio and build
 ```
 
-#### AdMob Development Setup
-For development, test ads are configured by default. To set up your own AdMob ads:
+**Development Guidelines**
+- Follow Kotlin coding conventions
+- Write meaningful commit messages  
+- Test your changes thoroughly
+- Update documentation as needed
 
-1. **Create AdMob Configuration:**
-   ```bash
-   # Create the config file (it's gitignored by default)
-   cp app/src/main/res/values/ad_mob_config.xml.example app/src/main/res/values/ad_mob_config.xml
-   ```
+**Pull Request Process**
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with tests
+4. Submit a pull request with clear description
 
-2. **Configure Ad Unit IDs:**
-   - Replace test IDs in `ad_mob_config.xml` with your AdMob ad unit IDs
-   - Keep test IDs during development to avoid policy violations
+## 📞 Support & Community
 
-3. **Ad Placements:**
-   - **Home Banner**: Bottom-anchored adaptive banner on chat list
-   - **Setup Interstitial**: Shows after completing initial setup
-   - **Settings Banner**: Banner ads in settings screens (configurable)
+### **Download MultiGPT**
+- 📱 **Google Play Store**: [Download MultiGPT](https://play.google.com/store/apps/details?id=com.matrix.multigpt)
+- 🔗 **GitHub Releases**: [Get APK directly](https://github.com/it5prasoon/MultiGPT/releases)
 
-4. **Testing:**
-   - Use test ad unit IDs during development
-   - Switch to production IDs only for release builds
+### **Need Help?**
+- 💬 **GitHub Discussions**: [Ask questions and share ideas](https://github.com/it5prasoon/MultiGPT/discussions)
+- 🐛 **Bug Reports**: [Report issues on GitHub](https://github.com/it5prasoon/MultiGPT/issues)
+- ⭐ **GitHub**: [View source code and contribute](https://github.com/it5prasoon/MultiGPT)
 
-#### Firebase Development Setup
-Firebase Analytics and Crashlytics are integrated for monitoring app performance and crashes:
-
-1. **Create Firebase Project:**
-   - Go to [Firebase Console](https://console.firebase.google.com/)
-   - Create new project or use existing one
-
-2. **Add Android App:**
-   - Package name: `com.matrix.multigpt`
-   - Download `google-services.json` to `app/` directory
-
-3. **Enable Services:**
-   - **Analytics**: Automatically enabled with Firebase
-   - **Crashlytics**: Enable in Firebase console → Crashlytics
-
-4. **Features Available:**
-   - **Crash Reporting**: Automatic crash detection and reporting
-   - **Analytics Events**: Screen views, user actions, API usage tracking
-   - **Custom Logging**: Debug information for troubleshooting
-
-5. **Privacy Note:**
-   - Firebase respects user privacy settings
-   - Analytics can be disabled programmatically if needed
-   - Only collects usage patterns, not personal chat content
-
-### Code Style
-- Follow [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html)
-- Use meaningful variable and function names
-- Write clean, self-documenting code
-- Add comments for complex logic
+### **Community Guidelines**
+- Be respectful and constructive
+- Help others learn and grow
+- Share your use cases and tips
+- Contribute positively to discussions
 
 ## 📄 License
 
-This project is licensed under the terms specified in [LICENSE](./LICENSE).
-
-## 🙏 Acknowledgments
-
-- OpenAI, Anthropic, Google, and Groq for their powerful AI models
-- The Android developer community for excellent tools and libraries
-- All contributors who help make MultiGPT better
-
-## 📞 Support
-
-- 📧 **Email**: your-email@example.com
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/your-repo/discussions)
-- 🐛 **Issues**: [GitHub Issues](https://github.com/your-repo/issues)
+This project is open source and available under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
 
-**Made with ❤️**
+**Built with ❤️ for the Android community**
+
+*Connect to the future of AI, today.*
 
 [⬆ Back to Top](#multigpt)
 
