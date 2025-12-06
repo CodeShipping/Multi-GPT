@@ -16,6 +16,8 @@ import com.matrix.multigpt.data.model.ApiType
 import com.matrix.multigpt.data.network.ModelFetchService
 import com.matrix.multigpt.data.repository.SettingRepository
 import com.matrix.multigpt.presentation.common.Route
+import com.matrix.multigpt.util.FirebaseEvents
+import com.matrix.multigpt.util.FirebaseManager
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +28,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class SetupViewModel @Inject constructor(
     private val settingRepository: SettingRepository,
-    private val modelFetchService: ModelFetchService
+    private val modelFetchService: ModelFetchService,
+    private val firebaseManager: FirebaseManager
 ) : ViewModel() {
 
     private val _platformState = MutableStateFlow(
@@ -66,6 +69,9 @@ class SetupViewModel @Inject constructor(
         val index = _platformState.value.indexOf(platform)
 
         if (index >= 0) {
+            // Log platform selection to Firebase
+            firebaseManager.logUserAction(FirebaseEvents.PLATFORM_SELECTED, platform.name.toString())
+            
             _platformState.update {
                 it.mapIndexed { i, p ->
                     if (index == i) {
@@ -98,6 +104,9 @@ class SetupViewModel @Inject constructor(
         val index = _platformState.value.indexOfFirst { it.name == apiType }
 
         if (index >= 0) {
+            // Log model selection to Firebase
+            firebaseManager.logUserAction(FirebaseEvents.MODEL_SELECTED, "$apiType:$model")
+            
             _platformState.update {
                 it.mapIndexed { i, p ->
                     if (index == i) {
@@ -118,6 +127,10 @@ class SetupViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            // Log setup completion to Firebase
+            val enabledPlatforms = _platformState.value.filter { it.enabled }.map { it.name.toString() }
+            firebaseManager.logUserAction(FirebaseEvents.SETUP_COMPLETE, enabledPlatforms.joinToString(","))
+            
             settingRepository.updatePlatforms(_platformState.value)
         }
     }

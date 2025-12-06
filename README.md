@@ -135,6 +135,14 @@ If you want to enable ads for monetization:
    ```
 4. The file is already gitignored to keep your ad IDs secure
 
+### Firebase Configuration (Optional)
+If you want to enable analytics and crash reporting:
+1. Create a [Firebase project](https://console.firebase.google.com/)
+2. Add an Android app to your Firebase project
+3. Download `google-services.json` and place it in `app/` directory
+4. The file is already gitignored to keep your Firebase config secure
+5. Enable Analytics and Crashlytics in Firebase console
+
 ### Installation
 1. Download the latest APK from [Releases](https://github.com/your-repo/releases)
 2. Install the APK on your Android device
@@ -239,6 +247,31 @@ For development, test ads are configured by default. To set up your own AdMob ad
 4. **Testing:**
    - Use test ad unit IDs during development
    - Switch to production IDs only for release builds
+
+#### Firebase Development Setup
+Firebase Analytics and Crashlytics are integrated for monitoring app performance and crashes:
+
+1. **Create Firebase Project:**
+   - Go to [Firebase Console](https://console.firebase.google.com/)
+   - Create new project or use existing one
+
+2. **Add Android App:**
+   - Package name: `com.matrix.multigpt`
+   - Download `google-services.json` to `app/` directory
+
+3. **Enable Services:**
+   - **Analytics**: Automatically enabled with Firebase
+   - **Crashlytics**: Enable in Firebase console → Crashlytics
+
+4. **Features Available:**
+   - **Crash Reporting**: Automatic crash detection and reporting
+   - **Analytics Events**: Screen views, user actions, API usage tracking
+   - **Custom Logging**: Debug information for troubleshooting
+
+5. **Privacy Note:**
+   - Firebase respects user privacy settings
+   - Analytics can be disabled programmatically if needed
+   - Only collects usage patterns, not personal chat content
 
 ### Code Style
 - Follow [Kotlin coding conventions](https://kotlinlang.org/docs/coding-conventions.html)

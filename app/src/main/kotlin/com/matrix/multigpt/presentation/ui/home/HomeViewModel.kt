@@ -8,6 +8,8 @@ import com.matrix.multigpt.data.database.entity.ChatRoom
 import com.matrix.multigpt.data.dto.Platform
 import com.matrix.multigpt.data.repository.ChatRepository
 import com.matrix.multigpt.data.repository.SettingRepository
+import com.matrix.multigpt.util.FirebaseEvents
+import com.matrix.multigpt.util.FirebaseManager
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -18,7 +20,8 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
-    private val settingRepository: SettingRepository
+    private val settingRepository: SettingRepository,
+    private val firebaseManager: FirebaseManager
 ) : ViewModel() {
 
     data class ChatListState(
@@ -65,6 +68,9 @@ class HomeViewModel @Inject constructor(
     }
 
     fun openSelectModelDialog() {
+        // Log platform selection dialog opening
+        firebaseManager.logUserAction(FirebaseEvents.ACTION_NEW_CHAT)
+        
         _showSelectModelDialog.update { true }
         disableSelectionMode()
     }
@@ -78,6 +84,9 @@ class HomeViewModel @Inject constructor(
             val selectedChats = _chatListState.value.chats.filterIndexed { index, _ ->
                 _chatListState.value.selected[index]
             }
+
+            // Log delete action to Firebase
+            firebaseManager.logUserAction(FirebaseEvents.ACTION_DELETE_CHAT, selectedChats.size.toString())
 
             chatRepository.deleteChats(selectedChats)
             _chatListState.update { it.copy(chats = chatRepository.fetchChatList()) }
