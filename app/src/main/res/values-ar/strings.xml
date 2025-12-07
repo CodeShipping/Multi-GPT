@@ -172,6 +172,15 @@
     <string name="aws_session_token_optional">اختياري لبيانات الاعتماد المؤقتة</string>
     <string name="aws_session_token_help">مطلوب فقط لبيانات اعتماد AWS المؤقتة (STS)</string>
     <string name="aws_region_help">اختر منطقة AWS حيث Bedrock متاح (مثل us-east-1، us-west-2)</string>
-    <string name="bedrock_credentials_description">أدخل بيانات اعتماد AWS الخاصة بك للوصول إلى نماذج أسس Bedrock. يتم تخزينها بأمان على جهازك فقط.</string>
+    <string name="bedrock_credentials_description">اختر طريقة المصادقة وأدخل بيانات الاعتماد للوصول إلى نماذج أسس Bedrock. يتم تخزينها بأمان على جهازك فقط.</string>
+    <string name="bedrock_auth_method">طريقة المصادقة</string>
+    <string name="bedrock_api_key_method">مفتاح API (موصى به)</string>
+    <string name="bedrock_api_key_method_description">مصادقة بسيطة باستخدام رمز Bearer مثل مقدمي الذكاء الاصطناعي الآخرين</string>
+    <string name="bedrock_signature_v4_method">AWS Signature V4</string>
+    <string name="bedrock_signature_v4_method_description">مصادقة AWS التقليدية باستخدام معرف مفتاح الوصول والسر</string>
+    <string name="bedrock_api_key_section_title">بيانات اعتماد مفتاح API</string>
+    <string name="bedrock_signature_v4_section_title">بيانات اعتماد AWS Signature V4</string>
+    <string name="bedrock_api_key">مفتاح Bedrock API</string>
+    <string name="bedrock_api_key_help">إنشاء من وحدة تحكم AWS Bedrock ← قسم مفاتيح API</string>
     <string name="export_chat">تصدير الدردشة</string>
 </resources>

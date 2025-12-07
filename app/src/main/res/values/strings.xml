@@ -205,7 +205,16 @@
     <string name="aws_session_token_optional">Optional for temporary credentials</string>
     <string name="aws_session_token_help">Only required for temporary AWS credentials (STS)</string>
     <string name="aws_region_help">Choose the AWS region where Bedrock is available (e.g., us-east-1, us-west-2)</string>
-    <string name="bedrock_credentials_description">Enter your AWS credentials to access Bedrock foundation models. These are stored securely on your device only.</string>
+    <string name="bedrock_credentials_description">Choose your authentication method and enter credentials to access Bedrock foundation models. These are stored securely on your device only.</string>
+    <string name="bedrock_auth_method">Authentication Method</string>
+    <string name="bedrock_api_key_method">API Key (Recommended)</string>
+    <string name="bedrock_api_key_method_description">Simple Bearer token authentication like other AI providers</string>
+    <string name="bedrock_signature_v4_method">AWS Signature V4</string>
+    <string name="bedrock_signature_v4_method_description">Traditional AWS authentication with Access Key ID and Secret</string>
+    <string name="bedrock_api_key_section_title">API Key Credentials</string>
+    <string name="bedrock_signature_v4_section_title">AWS Signature V4 Credentials</string>
+    <string name="bedrock_api_key">Bedrock API Key</string>
+    <string name="bedrock_api_key_help">Generate from AWS Bedrock Console → API Keys section</string>
     <string name="options">Options</string>
     <string name="update_chat_title">Update chat title</string>
     <string name="chat_title">Chat Title</string>

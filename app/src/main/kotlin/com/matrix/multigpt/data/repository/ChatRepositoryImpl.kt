@@ -31,6 +31,10 @@ import com.matrix.multigpt.data.dto.anthropic.response.ErrorResponseChunk
 import com.matrix.multigpt.data.dto.anthropic.response.MessageResponseChunk
 import com.matrix.multigpt.data.model.ApiType
 import com.matrix.multigpt.data.network.AnthropicAPI
+import com.matrix.multigpt.data.network.BedrockAPI
+import com.matrix.multigpt.data.dto.bedrock.BedrockCredentials
+import com.matrix.multigpt.data.dto.bedrock.BedrockStreamChunk
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -43,7 +47,8 @@ class ChatRepositoryImpl @Inject constructor(
     private val chatRoomDao: ChatRoomDao,
     private val messageDao: MessageDao,
     private val settingRepository: SettingRepository,
-    private val anthropic: AnthropicAPI
+    private val anthropic: AnthropicAPI,
+    private val bedrock: BedrockAPI
 ) : ChatRepository {
 
     private lateinit var openAI: OpenAI
@@ -173,6 +178,46 @@ class ChatRepositoryImpl @Inject constructor(
             .onCompletion { emit(ApiState.Done) }
     }
 
+    override suspend fun completeBedrockChat(question: Message, history: List<Message>): Flow<ApiState> {
+        val platform = checkNotNull(settingRepository.fetchPlatforms().firstOrNull { it.name == ApiType.BEDROCK })
+        
+        // Parse the credentials JSON to BedrockCredentials
+        val credentials = try {
+            if (!platform.token.isNullOrBlank()) {
+                Json.decodeFromString<BedrockCredentials>(platform.token)
+            } else {
+                throw IllegalArgumentException("No Bedrock credentials found")
+            }
+        } catch (e: Exception) {
+            return kotlinx.coroutines.flow.flowOf(ApiState.Error("Invalid Bedrock credentials: ${e.message}"))
+        }
+
+        // Configure the Bedrock API with the new credentials
+        bedrock.setBedrockCredentials(credentials)
+
+        val generatedMessages = messageToBedrockMessage(history + listOf(question))
+        
+        return bedrock.streamChatMessage(
+            messages = generatedMessages,
+            model = platform.model ?: "",
+            systemPrompt = platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT,
+            temperature = platform.temperature?.toDouble(),
+            maxTokens = ModelConstants.ANTHROPIC_MAXIMUM_TOKEN,
+            topP = platform.topP?.toDouble()
+        )
+            .map<BedrockStreamChunk, ApiState> { chunk ->
+                when {
+                    chunk.error != null -> ApiState.Error(chunk.error.message ?: "Bedrock API error")
+                    chunk.delta?.text != null -> ApiState.Success(chunk.delta.text)
+                    chunk.content_block?.text != null -> ApiState.Success(chunk.content_block.text)
+                    else -> ApiState.Success("")
+                }
+            }
+            .catch { throwable -> emit(ApiState.Error(throwable.message ?: "Unknown error")) }
+            .onStart { emit(ApiState.Loading) }
+            .onCompletion { emit(ApiState.Done) }
+    }
+
     override suspend fun fetchChatList(): List<ChatRoom> = chatRoomDao.getChatRooms()
 
     override suspend fun fetchMessages(chatId: Int): List<Message> = messageDao.loadMessages(chatId)
@@ -279,6 +324,22 @@ class ChatRepositoryImpl @Inject constructor(
                 null -> result.add(content(role = "user") { text(message.content) })
 
                 ApiType.GOOGLE -> result.add(content(role = "model") { text(message.content) })
+
+                else -> {}
+            }
+        }
+
+        return result
+    }
+
+    private fun messageToBedrockMessage(messages: List<Message>): List<Pair<String, String>> {
+        val result = mutableListOf<Pair<String, String>>()
+
+        messages.forEach { message ->
+            when (message.platformType) {
+                null -> result.add("user" to message.content)
+
+                ApiType.BEDROCK -> result.add("assistant" to message.content)
 
                 else -> {}
             }

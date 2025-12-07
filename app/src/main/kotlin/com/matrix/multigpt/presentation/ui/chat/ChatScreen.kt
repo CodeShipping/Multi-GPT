@@ -132,6 +132,8 @@ fun ChatScreen(
     val googleMessage by chatViewModel.googleMessage.collectAsStateWithLifecycle()
     val groqMessage by chatViewModel.groqMessage.collectAsStateWithLifecycle()
     val ollamaMessage by chatViewModel.ollamaMessage.collectAsStateWithLifecycle()
+    val bedrockMessage by chatViewModel.bedrockMessage.collectAsStateWithLifecycle()
+    val bedrockLoadingState by chatViewModel.bedrockLoadingState.collectAsStateWithLifecycle()
     val geminiNano by chatViewModel.geminiNanoMessage.collectAsStateWithLifecycle()
     val canUseChat = (chatViewModel.enabledPlatformsInChat.toSet() - appEnabledPlatforms.toSet()).isEmpty()
     val groupedMessages = remember(messages) { groupMessages(messages) }
@@ -279,7 +281,7 @@ fun ChatScreen(
                                 ApiType.GOOGLE -> googleMessage
                                 ApiType.GROQ -> groqMessage
                                 ApiType.OLLAMA -> ollamaMessage
-                                ApiType.BEDROCK -> anthropicMessage // Using anthropicMessage as placeholder for now
+                                ApiType.BEDROCK -> bedrockMessage
                             }
 
                             val loadingState = when (apiType) {
@@ -288,7 +290,7 @@ fun ChatScreen(
                                 ApiType.GOOGLE -> googleLoadingState
                                 ApiType.GROQ -> groqLoadingState
                                 ApiType.OLLAMA -> ollamaLoadingState
-                                ApiType.BEDROCK -> anthropicLoadingState // Using anthropicLoadingState as placeholder for now
+                                ApiType.BEDROCK -> bedrockLoadingState
                             }
 
                             OpponentChatBubble(

@@ -172,6 +172,15 @@
     <string name="aws_session_token_optional">Необязательно для временных учетных данных</string>
     <string name="aws_session_token_help">Необходим только для временных учетных данных AWS (STS)</string>
     <string name="aws_region_help">Выберите регион AWS, где доступен Bedrock (например, us-east-1, us-west-2)</string>
-    <string name="bedrock_credentials_description">Введите ваши учетные данные AWS для доступа к базовым моделям Bedrock. Они хранятся безопасно только на вашем устройстве.</string>
+    <string name="bedrock_credentials_description">Выберите метод аутентификации и введите учетные данные для доступа к базовым моделям Bedrock. Они безопасно хранятся только на вашем устройстве.</string>
+    <string name="bedrock_auth_method">Метод аутентификации</string>
+    <string name="bedrock_api_key_method">API ключ (Рекомендуется)</string>
+    <string name="bedrock_api_key_method_description">Простая аутентификация с Bearer токеном как у других провайдеров ИИ</string>
+    <string name="bedrock_signature_v4_method">AWS Signature V4</string>
+    <string name="bedrock_signature_v4_method_description">Традиционная аутентификация AWS с ID ключа доступа и секретом</string>
+    <string name="bedrock_api_key_section_title">Учетные данные API ключа</string>
+    <string name="bedrock_signature_v4_section_title">Учетные данные AWS Signature V4</string>
+    <string name="bedrock_api_key">Ключ Bedrock API</string>
+    <string name="bedrock_api_key_help">Создать в консоли AWS Bedrock → раздел API ключи</string>
     <string name="export_chat">Экспортировать чат</string>
 </resources>

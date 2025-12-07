@@ -222,6 +222,11 @@ class ChatViewModel @Inject constructor(
                 completeOllamaChat()
             }
 
+            ApiType.BEDROCK -> {
+                _bedrockMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp) }
+                completeBedrockChat()
+            }
+
             else -> {}
         }
     }
@@ -277,6 +282,7 @@ class ChatViewModel @Inject constructor(
         _googleMessage.update { it.copy(id = 0, content = "") }
         _groqMessage.update { it.copy(id = 0, content = "") }
         _ollamaMessage.update { it.copy(id = 0, content = "") }
+        _bedrockMessage.update { it.copy(id = 0, content = "") }
     }
 
     private fun completeChat() {
@@ -301,6 +307,10 @@ class ChatViewModel @Inject constructor(
 
         if (ApiType.OLLAMA in enabledPlatforms) {
             completeOllamaChat()
+        }
+
+        if (ApiType.BEDROCK in enabledPlatforms) {
+            completeBedrockChat()
         }
     }
 
@@ -336,6 +346,13 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             val chatFlow = chatRepository.completeOpenAIChat(question = _userMessage.value, history = _messages.value)
             chatFlow.collect { chunk -> openAIFlow.emit(chunk) }
+        }
+    }
+
+    private fun completeBedrockChat() {
+        viewModelScope.launch {
+            val chatFlow = chatRepository.completeBedrockChat(question = _userMessage.value, history = _messages.value)
+            chatFlow.collect { chunk -> bedrockFlow.emit(chunk) }
         }
     }
 
@@ -407,6 +424,13 @@ class ChatViewModel @Inject constructor(
             ollamaFlow.handleStates(
                 messageFlow = _ollamaMessage,
                 onLoadingComplete = { updateLoadingState(ApiType.OLLAMA, LoadingState.Idle) }
+            )
+        }
+
+        viewModelScope.launch {
+            bedrockFlow.handleStates(
+                messageFlow = _bedrockMessage,
+                onLoadingComplete = { updateLoadingState(ApiType.BEDROCK, LoadingState.Idle) }
             )
         }
 

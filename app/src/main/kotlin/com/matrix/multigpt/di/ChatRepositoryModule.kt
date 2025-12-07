@@ -9,6 +9,7 @@ import dagger.hilt.components.SingletonComponent
 import com.matrix.multigpt.data.database.dao.ChatRoomDao
 import com.matrix.multigpt.data.database.dao.MessageDao
 import com.matrix.multigpt.data.network.AnthropicAPI
+import com.matrix.multigpt.data.network.BedrockAPI
 import com.matrix.multigpt.data.repository.ChatRepository
 import com.matrix.multigpt.data.repository.ChatRepositoryImpl
 import com.matrix.multigpt.data.repository.SettingRepository
@@ -26,6 +27,7 @@ object ChatRepositoryModule {
         chatRoomDao: ChatRoomDao,
         messageDao: MessageDao,
         settingRepository: SettingRepository,
-        anthropicAPI: AnthropicAPI
-    ): ChatRepository = ChatRepositoryImpl(appContext, chatRoomDao, messageDao, settingRepository, anthropicAPI)
+        anthropicAPI: AnthropicAPI,
+        bedrockAPI: BedrockAPI
+    ): ChatRepository = ChatRepositoryImpl(appContext, chatRoomDao, messageDao, settingRepository, anthropicAPI, bedrockAPI)
 }

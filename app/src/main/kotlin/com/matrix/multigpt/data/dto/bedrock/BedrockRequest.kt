@@ -28,3 +28,33 @@ data class TextGenerationConfig(
     val temperature: Double? = null,
     val topP: Double? = null
 )
+
+@Serializable
+data class ConverseRequest(
+    val messages: List<ConverseMessage>,
+    val system: List<ConverseSystemMessage>? = null,
+    val inferenceConfig: ConverseInferenceConfig? = null
+)
+
+@Serializable
+data class ConverseMessage(
+    val role: String,
+    val content: List<ConverseContent>
+)
+
+@Serializable
+data class ConverseContent(
+    val text: String
+)
+
+@Serializable
+data class ConverseSystemMessage(
+    val text: String
+)
+
+@Serializable
+data class ConverseInferenceConfig(
+    val maxTokens: Int? = null,
+    val temperature: Double? = null,
+    val topP: Double? = null
+)

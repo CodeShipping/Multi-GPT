@@ -173,5 +173,14 @@
     <string name="aws_session_token_optional">אופציונלי לאישורים זמניים</string>
     <string name="aws_session_token_help">נדרש רק לאישורי AWS זמניים (STS)</string>
     <string name="aws_region_help">בחר את אזור AWS שבו Bedrock זמין (למשל us-east-1, us-west-2)</string>
-    <string name="bedrock_credentials_description">הזן את אישורי AWS שלך לגישה למודלי היסוד של Bedrock. הם מאוחסנים בבטחה רק במכשיר שלך.</string>
+    <string name="bedrock_credentials_description">בחר שיטת אימות והזן אישורים לגישה למודלי היסוד של Bedrock. הם מאוחסנים בבטחה רק במכשיר שלך.</string>
+    <string name="bedrock_auth_method">שיטת אימות</string>
+    <string name="bedrock_api_key_method">מפתח API (מומלץ)</string>
+    <string name="bedrock_api_key_method_description">אימות פשוט עם אסימון Bearer כמו ספקי AI אחרים</string>
+    <string name="bedrock_signature_v4_method">AWS Signature V4</string>
+    <string name="bedrock_signature_v4_method_description">אימות AWS מסורתי עם מזהה מפתח גישה וסוד</string>
+    <string name="bedrock_api_key_section_title">אישורי מפתח API</string>
+    <string name="bedrock_signature_v4_section_title">אישורי AWS Signature V4</string>
+    <string name="bedrock_api_key">מפתח Bedrock API</string>
+    <string name="bedrock_api_key_help">צור מקונסולת AWS Bedrock ← קטע מפתחות API</string>
 </resources>
