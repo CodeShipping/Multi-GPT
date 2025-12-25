@@ -77,8 +77,5 @@ app/src/main/.DS_Store
 # Kiro
 .kiro/
 
-# GitHub
-/.github/
-
 # Sensitive config files
 app/src/main/res/values/ad_mob_config.xml
