@@ -297,11 +297,11 @@ fun HomeTopAppBar(
 private fun ChatsTitle(scrollBehavior: TopAppBarScrollBehavior) {
     Text(
         modifier = Modifier
-            .padding(top = 32.dp)
-            .padding(horizontal = 20.dp, vertical = 16.dp),
+            .padding(top = 12.dp)
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         text = stringResource(R.string.chats),
         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 1.0F - scrollBehavior.state.overlappedFraction),
-        style = MaterialTheme.typography.headlineLarge
+        style = MaterialTheme.typography.headlineMedium
     )
 }
 
