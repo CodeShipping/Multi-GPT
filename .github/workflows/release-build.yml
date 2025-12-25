@@ -31,6 +31,47 @@ jobs:
           sdkmanager "$latest_stable_version"
           echo "$ANDROID_SDK_ROOT/build-tools/$latest_version_number" >> $GITHUB_PATH
 
+      - name: Create dummy google-services.json for CI
+        run: |
+          echo '{
+            "project_info": {
+              "project_number": "123456789",
+              "project_id": "dummy-project-ci",
+              "storage_bucket": "dummy-project-ci.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789:android:dummy",
+                  "android_client_info": {
+                    "package_name": "com.matrix.multigpt"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "dummy-api-key-for-ci"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }' > app/google-services.json
+
+      - name: Create dummy AdMob config for CI
+        run: |
+          mkdir -p app/src/main/res/values
+          echo '<?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+              <string name="home_banner">ca-app-pub-3940256099942544/6300978111</string>
+          </resources>' > app/src/main/res/values/ad_mob_config.xml
+
       - name: Build Unsigned Release APK
         run: ./gradlew assembleRelease
 
