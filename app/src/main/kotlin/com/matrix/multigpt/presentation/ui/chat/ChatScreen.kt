@@ -21,6 +21,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -64,6 +68,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
@@ -152,6 +157,15 @@ fun ChatScreen(
         listState.animateScrollToItem(groupedMessages.keys.size)
     }
 
+    // Auto-scroll to bottom when keyboard opens
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    LaunchedEffect(imeVisible) {
+        if (imeVisible) {
+            delay(100) // Small delay to let keyboard animation start
+            listState.animateScrollToItem(groupedMessages.keys.size)
+        }
+    }
+
     if (com.matrix.multigpt.BuildConfig.DEBUG) {
         android.util.Log.d("AIPackage", "AICore: ${aiCorePackageInfo?.versionName ?: "Not installed"}, Private Compute Services: ${privateComputePackageInfo?.versionName ?: "Not installed"}")
     }
@@ -164,6 +178,7 @@ fun ChatScreen(
                 indication = null,
                 interactionSource = remember { MutableInteractionSource() }
             ) { focusManager.clearFocus() },
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ChatTopBar(
                 chatRoom.title,
@@ -494,7 +509,8 @@ fun ChatInputBox(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .windowInsetsPadding(BottomAppBarDefaults.windowInsets)
+            .windowInsetsPadding(WindowInsets.navigationBars.exclude(WindowInsets.ime))
+            .windowInsetsPadding(WindowInsets.ime)
             .padding(BottomAppBarDefaults.ContentPadding)
             .background(color = MaterialTheme.colorScheme.surface)
     ) {

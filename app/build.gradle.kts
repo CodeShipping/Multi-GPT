@@ -19,8 +19,8 @@ android {
         applicationId = "com.matrix.multigpt"
         minSdk = 31
         targetSdk = 35
-        versionCode = 7
-        versionName = "1.25.4"
+        versionCode = 8
+        versionName = "1.25.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
