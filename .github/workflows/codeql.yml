@@ -143,8 +143,9 @@ jobs:
     - if: matrix.build-mode == 'manual'
       shell: bash
       run: |
-        # Build the project with Gradle but skip Crashlytics upload tasks
-        ./gradlew clean compileDebugKotlin compileReleaseKotlin --no-daemon -x uploadCrashlyticsMappingFileRelease -x uploadCrashlyticsMappingFileDebug
+        # Build the project for CodeQL analysis - compile only the necessary components
+        # This avoids the full assemble process that triggers Crashlytics uploads
+        ./gradlew clean compileDebugKotlin compileReleaseKotlin --no-daemon
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
