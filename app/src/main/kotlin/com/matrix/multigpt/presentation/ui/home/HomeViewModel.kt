@@ -35,12 +35,21 @@ class HomeViewModel @Inject constructor(
 
     private val _platformState = MutableStateFlow(listOf<Platform>())
     val platformState: StateFlow<List<Platform>> = _platformState.asStateFlow()
+    
+    // Track if platforms have been loaded
+    private val _isPlatformsLoaded = MutableStateFlow(false)
+    val isPlatformsLoaded: StateFlow<Boolean> = _isPlatformsLoaded.asStateFlow()
 
     private val _showSelectModelDialog = MutableStateFlow(false)
     val showSelectModelDialog: StateFlow<Boolean> = _showSelectModelDialog.asStateFlow()
 
     private val _showDeleteWarningDialog = MutableStateFlow(false)
     val showDeleteWarningDialog: StateFlow<Boolean> = _showDeleteWarningDialog.asStateFlow()
+
+    init {
+        // Load platforms immediately when ViewModel is created
+        fetchPlatformStatus()
+    }
 
     fun updateCheckedState(platform: Platform) {
         val index = _platformState.value.indexOf(platform)
@@ -125,10 +134,11 @@ class HomeViewModel @Inject constructor(
 
     fun fetchPlatformStatus() {
         viewModelScope.launch {
-            // Add a small delay to ensure DataStore writes from setup are completed
-            kotlinx.coroutines.delay(100)
+            _isPlatformsLoaded.update { false }
             val platforms = settingRepository.fetchPlatforms()
             _platformState.update { platforms }
+            _isPlatformsLoaded.update { true }
+            Log.d("HomeViewModel", "Platforms loaded: ${platforms.filter { it.enabled }.map { it.name }}")
         }
     }
 

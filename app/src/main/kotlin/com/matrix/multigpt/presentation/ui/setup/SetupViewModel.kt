@@ -1,5 +1,6 @@
 package com.matrix.multigpt.presentation.ui.setup
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -133,13 +134,22 @@ class SetupViewModel @Inject constructor(
                 // Log setup completion to Firebase
                 val enabledPlatforms = updatedPlatforms.filter { it.enabled }.map { it.name.toString() }
                 firebaseManager.logUserAction(FirebaseEvents.SETUP_COMPLETE, enabledPlatforms.joinToString(","))
-                
+
+                Log.d("SetupViewModel", "Saving platforms: ${updatedPlatforms.filter { it.enabled }.map { "${it.name}:${it.token != null}" }}")
+
                 // Wait for the repository update to complete
                 settingRepository.updatePlatforms(updatedPlatforms)
-                
+
+                Log.d("SetupViewModel", "Platforms saved, verifying...")
+
+                // Verify the save was successful by reading back
+                val savedPlatforms = settingRepository.fetchPlatforms()
+                Log.d("SetupViewModel", "Verified platforms: ${savedPlatforms.filter { it.enabled }.map { "${it.name}:${it.token != null}" }}")
+
                 // Call completion callback after DataStore write completes
                 onComplete?.invoke()
             } catch (e: Exception) {
+                Log.e("SetupViewModel", "Error saving platforms", e)
                 // Handle error case and still allow navigation
                 onComplete?.invoke()
             }

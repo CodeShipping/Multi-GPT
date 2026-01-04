@@ -25,6 +25,9 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -509,9 +512,6 @@ fun ChatInputBox(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.navigationBars.exclude(WindowInsets.ime))
-            .windowInsetsPadding(WindowInsets.ime)
-            .padding(BottomAppBarDefaults.ContentPadding)
             .background(color = MaterialTheme.colorScheme.surface)
     ) {
         BasicTextField(

@@ -94,6 +94,7 @@ fun HomeScreen(
     val showSelectModelDialog by homeViewModel.showSelectModelDialog.collectAsStateWithLifecycle()
     val showDeleteWarningDialog by homeViewModel.showDeleteWarningDialog.collectAsStateWithLifecycle()
     val platformState by homeViewModel.platformState.collectAsStateWithLifecycle()
+    val isPlatformsLoaded by homeViewModel.isPlatformsLoaded.collectAsStateWithLifecycle()
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -133,15 +134,20 @@ fun HomeScreen(
             )
         },
         floatingActionButton = {
-            NewChatButton(expanded = listState.isScrollingUp(), onClick = {
-                val enabledApiTypes = platformState.filter { it.enabled }.map { it.name }
-                if (enabledApiTypes.size == 1) {
-                    // Navigate to new chat directly if only one platform is enabled
-                    navigateToNewChat(enabledApiTypes)
-                } else {
-                    homeViewModel.openSelectModelDialog()
+            NewChatButton(
+                expanded = listState.isScrollingUp(),
+                enabled = isPlatformsLoaded && platformState.any { it.enabled },
+                onClick = {
+                    if (!isPlatformsLoaded) return@NewChatButton
+                    val enabledApiTypes = platformState.filter { it.enabled }.map { it.name }
+                    if (enabledApiTypes.size == 1) {
+                        // Navigate to new chat directly if only one platform is enabled
+                        navigateToNewChat(enabledApiTypes)
+                    } else {
+                        homeViewModel.openSelectModelDialog()
+                    }
                 }
-            })
+            )
         },
         bottomBar = {
             // Banner ad pinned to bottom of screen
@@ -331,6 +337,7 @@ private fun LazyListState.isScrollingUp(): Boolean {
 fun NewChatButton(
     modifier: Modifier = Modifier,
     expanded: Boolean = true,
+    enabled: Boolean = true,
     onClick: () -> Unit = { }
 ) {
     val orientation = LocalConfiguration.current.orientation
@@ -341,7 +348,7 @@ fun NewChatButton(
     }
     ExtendedFloatingActionButton(
         modifier = fabModifier,
-        onClick = { onClick() },
+        onClick = { if (enabled) onClick() },
         expanded = expanded,
         icon = { Icon(Icons.Filled.Add, stringResource(R.string.new_chat)) },
         text = { Text(text = stringResource(R.string.new_chat)) }
