@@ -3,6 +3,7 @@ package com.matrix.multigpt.presentation.ui.chat
 import android.text.util.Linkify
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +40,7 @@ fun UserChatBubble(
     modifier: Modifier = Modifier,
     text: String,
     isLoading: Boolean,
+    timestamp: Long? = null,
     onEditClick: () -> Unit,
     onCopyClick: () -> Unit
 ) {
@@ -52,15 +54,27 @@ fun UserChatBubble(
     Column(horizontalAlignment = Alignment.End) {
         Card(
             modifier = modifier,
-            shape = RoundedCornerShape(32.dp),
+            shape = RoundedCornerShape(16.dp),
             colors = cardColor
         ) {
-            MarkdownText(
-                modifier = Modifier.padding(16.dp),
-                markdown = text,
-                isTextSelectable = true,
-                linkifyMask = Linkify.WEB_URLS
-            )
+            Column {
+                MarkdownText(
+                    modifier = Modifier.padding(16.dp),
+                    markdown = text,
+                    isTextSelectable = true,
+                    linkifyMask = Linkify.WEB_URLS
+                )
+                timestamp?.let {
+                    Text(
+                        text = formatTimestamp(it),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.6f),
+                        modifier = Modifier
+                            .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
+                            .align(Alignment.End)
+                    )
+                }
+            }
         }
         Row {
             if (!isLoading) {
@@ -80,6 +94,8 @@ fun OpponentChatBubble(
     isError: Boolean = false,
     apiType: ApiType,
     text: String,
+    timestamp: Long? = null,
+    modelName: String? = null,
     onCopyClick: () -> Unit = {},
     onRetryClick: () -> Unit = {}
 ) {
@@ -93,17 +109,36 @@ fun OpponentChatBubble(
     Column(modifier = modifier) {
         Column(horizontalAlignment = Alignment.End) {
             Card(
-                shape = RoundedCornerShape(32.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = cardColor
             ) {
-                MarkdownText(
-                    modifier = Modifier.padding(24.dp),
-                    markdown = text.trimIndent() + if (isLoading) "▊" else "",
-                    isTextSelectable = true,
-                    linkifyMask = Linkify.WEB_URLS
-                )
-                if (!isLoading) {
-                    BrandText(apiType)
+                Column {
+                    MarkdownText(
+                        modifier = Modifier.padding(24.dp),
+                        markdown = text.trimIndent() + if (isLoading) "▊" else "",
+                        isTextSelectable = true,
+                        linkifyMask = Linkify.WEB_URLS
+                    )
+                    if (!isLoading) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 24.dp, end = 24.dp, bottom = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            BrandText(apiType = apiType, modelName = modelName)
+                            timestamp?.let {
+                                Text(
+                                    text = formatTimestamp(it),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    } else {
+                        BrandText(apiType = apiType, modelName = modelName)
+                    }
                 }
             }
 
@@ -168,18 +203,21 @@ private fun RetryChip(onRetryClick: () -> Unit) {
 }
 
 @Composable
-private fun BrandText(apiType: ApiType) {
-    Box(
-        modifier = Modifier
-            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp)
-            .fillMaxWidth()
-    ) {
+private fun BrandText(apiType: ApiType, modelName: String? = null) {
+    Column {
         Text(
-            modifier = Modifier.align(Alignment.CenterEnd),
             text = getPlatformAPIBrandText(apiType),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
         )
+        modelName?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.85f)
+            )
+        }
     }
 }
 
@@ -222,5 +260,22 @@ fun OpponentChatBubblePreview() {
             onCopyClick = {},
             onRetryClick = {}
         )
+    }
+}
+
+
+private fun formatTimestamp(timestamp: Long): String {
+    val now = System.currentTimeMillis() / 1000
+    val diff = now - timestamp
+    
+    return when {
+        diff < 60 -> "Just now"
+        diff < 3600 -> "${diff / 60}m ago"
+        diff < 86400 -> "${diff / 3600}h ago"
+        else -> {
+            val date = java.util.Date(timestamp * 1000)
+            val format = java.text.SimpleDateFormat("MMM dd, HH:mm", java.util.Locale.getDefault())
+            format.format(date)
+        }
     }
 }

@@ -2,6 +2,8 @@ package com.matrix.multigpt.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -16,6 +18,12 @@ import javax.inject.Singleton
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
     private const val DB_NAME = "chat"
+    
+    private val MIGRATION_1_2 = object : Migration(1, 2) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE messages ADD COLUMN model_name TEXT")
+        }
+    }
 
     @Provides
     fun provideChatRoomDao(chatDatabase: ChatDatabase): ChatRoomDao = chatDatabase.chatRoomDao()
@@ -29,5 +37,7 @@ object DatabaseModule {
         appContext,
         ChatDatabase::class.java,
         DB_NAME
-    ).build()
+    )
+        .addMigrations(MIGRATION_1_2)
+        .build()
 }

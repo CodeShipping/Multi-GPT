@@ -5,6 +5,11 @@ import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,22 +21,19 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,21 +46,17 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material3.BottomAppBarDefaults
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -75,13 +73,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
@@ -89,8 +90,8 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider.getUriForFile
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -159,6 +160,7 @@ fun ChatScreen(
     val chatBubbleScrollStates = rememberSaveable(saver = multiScrollStateSaver) { DefaultHashMap<Int, ScrollState> { ScrollState(0) } }
     val canEnableAICoreMode = rememberSaveable { checkAICoreAvailability(aiCorePackageInfo, privateComputePackageInfo) }
     val context = LocalContext.current
+    val haptic = LocalHapticFeedback.current
     
     // Model selection state
     val currentModels by chatViewModel.currentModels.collectAsStateWithLifecycle()
@@ -233,29 +235,36 @@ fun ChatScreen(
             groupedMessages.keys.sorted().forEach { key ->
                 if (key % 2 == 0) {
                     // User
-                    item {
+                    item(key = key) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .animateItem()
                         ) {
                             Spacer(modifier = Modifier.weight(1f))
                             UserChatBubble(
                                 modifier = Modifier.widthIn(max = maximumChatBubbleWidth),
                                 text = groupedMessages[key]!![0].content,
                                 isLoading = !isIdle,
-                                onCopyClick = { clipboardManager.setText(AnnotatedString(groupedMessages[key]!![0].content.trim())) },
+                                timestamp = groupedMessages[key]!![0].createdAt,
+                                onCopyClick = { 
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    clipboardManager.setText(AnnotatedString(groupedMessages[key]!![0].content.trim()))
+                                    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                                },
                                 onEditClick = { chatViewModel.openEditQuestionDialog(groupedMessages[key]!![0]) }
                             )
                         }
                     }
                 } else {
                     // Assistant
-                    item {
+                    item(key = key) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(chatBubbleScrollStates[(key - 1) / 2])
+                                .animateItem()
                         ) {
                             Spacer(modifier = Modifier.width(8.dp))
                             groupedMessages[key]!!.sortedBy { it.platformType }.forEach { m ->
@@ -268,8 +277,17 @@ fun ChatScreen(
                                         isLoading = false,
                                         apiType = apiType,
                                         text = m.content,
-                                        onCopyClick = { clipboardManager.setText(AnnotatedString(m.content.trim())) },
-                                        onRetryClick = { chatViewModel.retryQuestion(m) }
+                                        timestamp = m.createdAt,
+                                        modelName = m.modelName,
+                                        onCopyClick = { 
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            clipboardManager.setText(AnnotatedString(m.content.trim()))
+                                            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                                        },
+                                        onRetryClick = { 
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            chatViewModel.retryQuestion(m)
+                                        }
                                     )
                                 }
                             }
@@ -297,49 +315,66 @@ fun ChatScreen(
                     }
                 }
 
-                item {
+                item(key = "loading_assistant") {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .horizontalScroll(chatBubbleScrollStates[(latestMessageIndex + 1) / 2])
+                            .animateItem()
                     ) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        chatViewModel.enabledPlatformsInChat.sorted().forEach { apiType ->
-                            val message = when (apiType) {
-                                ApiType.OPENAI -> openAIMessage
-                                ApiType.ANTHROPIC -> anthropicMessage
-                                ApiType.GOOGLE -> googleMessage
-                                ApiType.GROQ -> groqMessage
-                                ApiType.OLLAMA -> ollamaMessage
-                                ApiType.BEDROCK -> bedrockMessage
-                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            chatViewModel.enabledPlatformsInChat.sorted().forEach { apiType ->
+                                val message = when (apiType) {
+                                    ApiType.OPENAI -> openAIMessage
+                                    ApiType.ANTHROPIC -> anthropicMessage
+                                    ApiType.GOOGLE -> googleMessage
+                                    ApiType.GROQ -> groqMessage
+                                    ApiType.OLLAMA -> ollamaMessage
+                                    ApiType.BEDROCK -> bedrockMessage
+                                }
 
-                            val loadingState = when (apiType) {
-                                ApiType.OPENAI -> openaiLoadingState
-                                ApiType.ANTHROPIC -> anthropicLoadingState
-                                ApiType.GOOGLE -> googleLoadingState
-                                ApiType.GROQ -> groqLoadingState
-                                ApiType.OLLAMA -> ollamaLoadingState
-                                ApiType.BEDROCK -> bedrockLoadingState
-                            }
+                                val loadingState = when (apiType) {
+                                    ApiType.OPENAI -> openaiLoadingState
+                                    ApiType.ANTHROPIC -> anthropicLoadingState
+                                    ApiType.GOOGLE -> googleLoadingState
+                                    ApiType.GROQ -> groqLoadingState
+                                    ApiType.OLLAMA -> ollamaLoadingState
+                                    ApiType.BEDROCK -> bedrockLoadingState
+                                }
 
-                            OpponentChatBubble(
-                                modifier = Modifier
-                                    .padding(horizontal = 8.dp, vertical = 12.dp)
-                                    .widthIn(max = maximumChatBubbleWidth),
-                                canRetry = canUseChat,
-                                isLoading = loadingState == ChatViewModel.LoadingState.Loading,
-                                apiType = apiType,
-                                text = message.content,
-                                onCopyClick = { clipboardManager.setText(AnnotatedString(message.content.trim())) },
-                                onRetryClick = { chatViewModel.retryQuestion(message) }
-                            )
+                                // Show typing indicator if loading and no content yet
+                                if (loadingState == ChatViewModel.LoadingState.Loading && message.content.isEmpty()) {
+                                    TypingIndicator(
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
+                                        apiType = apiType
+                                    )
+                                } else {
+                                    OpponentChatBubble(
+                                        modifier = Modifier
+                                            .padding(horizontal = 8.dp, vertical = 12.dp)
+                                            .widthIn(max = maximumChatBubbleWidth),
+                                        canRetry = canUseChat,
+                                        isLoading = loadingState == ChatViewModel.LoadingState.Loading,
+                                        apiType = apiType,
+                                        text = message.content,
+                                        modelName = currentModels[apiType],
+                                        onCopyClick = { 
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            clipboardManager.setText(AnnotatedString(message.content.trim()))
+                                            Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                                        },
+                                        onRetryClick = { 
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            chatViewModel.retryQuestion(message)
+                                        }
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(systemChatMargin))
                         }
-                        Spacer(modifier = Modifier.width(systemChatMargin))
                     }
                 }
             }
-        }
 
             // Scroll to bottom FAB
             if (listState.canScrollForward) {
@@ -365,6 +400,7 @@ fun ChatScreen(
             chatEnabled = canUseChat,
             sendButtonEnabled = question.trim().isNotBlank() && isIdle
         ) {
+            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             chatViewModel.askQuestion()
             focusManager.clearFocus()
         }
@@ -834,5 +870,47 @@ fun ScrollToBottomButton(onClick: () -> Unit) {
         contentColor = MaterialTheme.colorScheme.onTertiaryContainer
     ) {
         Icon(Icons.Rounded.KeyboardArrowDown, stringResource(R.string.scroll_to_bottom_icon))
+    }
+}
+
+@Composable
+fun TypingIndicator(
+    modifier: Modifier = Modifier,
+    apiType: ApiType
+) {
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition(label = "typing")
+    
+    Row(
+        modifier = modifier
+            .background(
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        repeat(3) { index ->
+            val scale by infiniteTransition.animateFloat(
+                initialValue = 0.5f,
+                targetValue = 1f,
+                animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+                    animation = tween(600),
+                    repeatMode = androidx.compose.animation.core.RepeatMode.Reverse,
+                    initialStartOffset = androidx.compose.animation.core.StartOffset(index * 150)
+                ),
+                label = "dot$index"
+            )
+            
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .scale(scale)
+                    .background(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        shape = androidx.compose.foundation.shape.CircleShape
+                    )
+            )
+        }
     }
 }

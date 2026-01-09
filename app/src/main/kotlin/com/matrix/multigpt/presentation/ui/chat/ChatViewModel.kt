@@ -108,29 +108,29 @@ class ChatViewModel @Inject constructor(
     val isLoaded = _isLoaded.asStateFlow()
 
     // Currently active(chat completion) user input. This is used when user input is sent.
-    private val _userMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = null))
+    private val _userMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = null, modelName = null))
     val userMessage = _userMessage.asStateFlow()
 
     // Currently active(chat completion) assistant output. This is used when data is received from the API.
-    private val _openAIMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.OPENAI))
+    private val _openAIMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.OPENAI, modelName = null))
     val openAIMessage = _openAIMessage.asStateFlow()
 
-    private val _anthropicMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.ANTHROPIC))
+    private val _anthropicMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.ANTHROPIC, modelName = null))
     val anthropicMessage = _anthropicMessage.asStateFlow()
 
-    private val _googleMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.GOOGLE))
+    private val _googleMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.GOOGLE, modelName = null))
     val googleMessage = _googleMessage.asStateFlow()
 
-    private val _groqMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.GROQ))
+    private val _groqMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.GROQ, modelName = null))
     val groqMessage = _groqMessage.asStateFlow()
 
-    private val _ollamaMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.OLLAMA))
+    private val _ollamaMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.OLLAMA, modelName = null))
     val ollamaMessage = _ollamaMessage.asStateFlow()
 
-    private val _bedrockMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.BEDROCK))
+    private val _bedrockMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.BEDROCK, modelName = null))
     val bedrockMessage = _bedrockMessage.asStateFlow()
 
-    private val _geminiNanoMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = null))
+    private val _geminiNanoMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = null, modelName = null))
     val geminiNanoMessage = _geminiNanoMessage.asStateFlow()
 
     // Flows for assistant message streams
@@ -216,32 +216,32 @@ class ChatViewModel @Inject constructor(
 
         when (message.platformType) {
             ApiType.OPENAI -> {
-                _openAIMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp) }
+                _openAIMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp, modelName = message.modelName) }
                 completeOpenAIChat()
             }
 
             ApiType.ANTHROPIC -> {
-                _anthropicMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp) }
+                _anthropicMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp, modelName = message.modelName) }
                 completeAnthropicChat()
             }
 
             ApiType.GOOGLE -> {
-                _googleMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp) }
+                _googleMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp, modelName = message.modelName) }
                 completeGoogleChat()
             }
 
             ApiType.GROQ -> {
-                _groqMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp) }
+                _groqMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp, modelName = message.modelName) }
                 completeGroqChat()
             }
 
             ApiType.OLLAMA -> {
-                _ollamaMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp) }
+                _ollamaMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp, modelName = message.modelName) }
                 completeOllamaChat()
             }
 
             ApiType.BEDROCK -> {
-                _bedrockMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp) }
+                _bedrockMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp, modelName = message.modelName) }
                 completeBedrockChat()
             }
 
@@ -308,26 +308,32 @@ class ChatViewModel @Inject constructor(
         val enabledPlatforms = enabledPlatformsInChat.toSet()
 
         if (ApiType.OPENAI in enabledPlatforms) {
+            _openAIMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.OPENAI]) }
             completeOpenAIChat()
         }
 
         if (ApiType.ANTHROPIC in enabledPlatforms) {
+            _anthropicMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.ANTHROPIC]) }
             completeAnthropicChat()
         }
 
         if (ApiType.GOOGLE in enabledPlatforms) {
+            _googleMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.GOOGLE]) }
             completeGoogleChat()
         }
 
         if (ApiType.GROQ in enabledPlatforms) {
+            _groqMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.GROQ]) }
             completeGroqChat()
         }
 
         if (ApiType.OLLAMA in enabledPlatforms) {
+            _ollamaMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.OLLAMA]) }
             completeOllamaChat()
         }
 
         if (ApiType.BEDROCK in enabledPlatforms) {
+            _bedrockMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.BEDROCK]) }
             completeBedrockChat()
         }
     }
