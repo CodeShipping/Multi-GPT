@@ -194,6 +194,7 @@ fun ChatScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .windowInsetsPadding(WindowInsets.statusBars)
+            .navigationBarsPadding()
             .imePadding()
             .clickable(
                 indication = null,
