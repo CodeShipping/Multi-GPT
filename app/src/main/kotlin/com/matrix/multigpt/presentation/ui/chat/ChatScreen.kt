@@ -10,6 +10,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -29,6 +30,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentSize
@@ -38,11 +40,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.Icon
@@ -51,8 +57,10 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -69,7 +77,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -79,9 +86,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.core.content.FileProvider.getUriForFile
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -150,6 +159,11 @@ fun ChatScreen(
     val chatBubbleScrollStates = rememberSaveable(saver = multiScrollStateSaver) { DefaultHashMap<Int, ScrollState> { ScrollState(0) } }
     val canEnableAICoreMode = rememberSaveable { checkAICoreAvailability(aiCorePackageInfo, privateComputePackageInfo) }
     val context = LocalContext.current
+    
+    // Model selection state
+    val currentModels by chatViewModel.currentModels.collectAsStateWithLifecycle()
+    val fetchedModels by chatViewModel.fetchedModels.collectAsStateWithLifecycle()
+    val modelFetchState by chatViewModel.modelFetchState.collectAsStateWithLifecycle()
 
     val scope = rememberCoroutineScope()
 
@@ -193,7 +207,13 @@ fun ChatScreen(
             onBackAction,
             scrollBehavior,
             chatViewModel::openChatTitleDialog,
-            onExportChatItemClick = { exportChat(context, chatViewModel) }
+            onExportChatItemClick = { exportChat(context, chatViewModel) },
+            currentModels = currentModels,
+            fetchedModels = fetchedModels,
+            modelFetchState = modelFetchState,
+            enabledProviders = appEnabledPlatforms,
+            onFetchModels = chatViewModel::fetchModelsForProvider,
+            onModelSelected = chatViewModel::updateSelectedModel
         )
 
         // Chat content - takes remaining space
@@ -421,12 +441,243 @@ private fun ChatTopBar(
     onBackAction: () -> Unit,
     scrollBehavior: TopAppBarScrollBehavior,
     onChatTitleItemClick: () -> Unit,
-    onExportChatItemClick: () -> Unit
+    onExportChatItemClick: () -> Unit,
+    currentModels: Map<ApiType, String>,
+    fetchedModels: Map<ApiType, List<com.matrix.multigpt.data.dto.ModelInfo>>,
+    modelFetchState: Map<ApiType, com.matrix.multigpt.data.dto.ModelFetchResult>,
+    enabledProviders: List<ApiType>,
+    onFetchModels: (ApiType) -> Unit,
+    onModelSelected: (ApiType, String) -> Unit
 ) {
     var isDropDownMenuExpanded by remember { mutableStateOf(false) }
+    var isModelDropdownExpanded by remember { mutableStateOf(false) }
+    var selectedProvider by remember { mutableStateOf<ApiType?>(null) }
+    
+    // Get current model and provider for display
+    val firstProvider = enabledProviders.firstOrNull()
+    val currentModel = firstProvider?.let { currentModels[it] } ?: "Select Model"
+    val currentProviderName = firstProvider?.name ?: ""
+    
+    // Fetch models when provider is selected
+    LaunchedEffect(selectedProvider) {
+        selectedProvider?.let { provider ->
+            if (fetchedModels[provider] == null) {
+                onFetchModels(provider)
+            }
+        }
+    }
 
     TopAppBar(
-        title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        title = { 
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                // Classy model selector dropdown
+                Box {
+                    Surface(
+                        onClick = { 
+                            isModelDropdownExpanded = true
+                            selectedProvider = null // Reset to provider list
+                        },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
+                        modifier = Modifier.wrapContentSize()
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(
+                                    text = currentModel,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                if (currentProviderName.isNotEmpty()) {
+                                    Text(
+                                        text = currentProviderName,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(
+                                imageVector = if (isModelDropdownExpanded) 
+                                    Icons.Rounded.KeyboardArrowUp 
+                                else 
+                                    Icons.Rounded.KeyboardArrowDown,
+                                contentDescription = "Select Model",
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    // Multi-level dropdown menu - centered
+                    DropdownMenu(
+                        expanded = isModelDropdownExpanded,
+                        onDismissRequest = { 
+                            isModelDropdownExpanded = false
+                            selectedProvider = null
+                        },
+                        offset = DpOffset(x = (-15).dp, y = 8.dp),
+                        modifier = Modifier.widthIn(min = 220.dp, max = 280.dp)
+                    ) {
+                    if (selectedProvider == null) {
+                        // Show providers
+                        Text(
+                            text = "Select Provider",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                        Divider()
+                        
+                        enabledProviders.forEach { provider ->
+                            DropdownMenuItem(
+                                text = { 
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Column {
+                                            Text(provider.name)
+                                            currentModels[provider]?.let { model ->
+                                                Text(
+                                                    text = model,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                                )
+                                            }
+                                        }
+                                        Icon(
+                                            imageVector = Icons.Rounded.KeyboardArrowDown,
+                                            contentDescription = null,
+                                            modifier = Modifier
+                                                .size(16.dp)
+                                                .alpha(0.6f)
+                                        )
+                                    }
+                                },
+                                onClick = { selectedProvider = provider }
+                            )
+                        }
+                    } else {
+                        // Show models for selected provider
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = { selectedProvider = null },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Back",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Text(
+                                text = "${selectedProvider!!.name} Models",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Divider()
+                        
+                        val fetchState = modelFetchState[selectedProvider]
+                        when (fetchState) {
+                            is com.matrix.multigpt.data.dto.ModelFetchResult.Loading -> {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Text("Loading models...")
+                                }
+                            }
+                            is com.matrix.multigpt.data.dto.ModelFetchResult.Error -> {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Failed to load models",
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                    TextButton(onClick = { selectedProvider?.let { onFetchModels(it) } }) {
+                                        Text("Retry")
+                                    }
+                                }
+                            }
+                            else -> {
+                                val models = fetchedModels[selectedProvider] ?: emptyList()
+                                if (models.isEmpty()) {
+                                    Text(
+                                        text = "No models available",
+                                        modifier = Modifier.padding(16.dp),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                } else {
+                                    models.forEach { modelInfo ->
+                                        val isSelected = currentModels[selectedProvider] == modelInfo.id
+                                        DropdownMenuItem(
+                                            text = { 
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = modelInfo.name,
+                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                        color = if (isSelected) 
+                                                            MaterialTheme.colorScheme.primary 
+                                                        else 
+                                                            MaterialTheme.colorScheme.onSurface,
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    if (isSelected) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Done,
+                                                            contentDescription = "Selected",
+                                                            modifier = Modifier.size(18.dp),
+                                                            tint = MaterialTheme.colorScheme.primary
+                                                        )
+                                                    }
+                                                }
+                                            },
+                                            onClick = { 
+                                                onModelSelected(selectedProvider!!, modelInfo.id)
+                                                isModelDropdownExpanded = false
+                                                selectedProvider = null
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                }
+            }
+        },
         navigationIcon = {
             IconButton(
                 onClick = onBackAction

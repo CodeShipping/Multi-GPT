@@ -7,7 +7,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import com.matrix.multigpt.data.database.entity.ChatRoom
 import com.matrix.multigpt.data.database.entity.Message
 import com.matrix.multigpt.data.dto.ApiState
+import com.matrix.multigpt.data.dto.ModelFetchResult
+import com.matrix.multigpt.data.dto.ModelInfo
+import com.matrix.multigpt.data.ModelConstants
 import com.matrix.multigpt.data.model.ApiType
+import com.matrix.multigpt.data.network.ModelFetchService
 import com.matrix.multigpt.data.repository.ChatRepository
 import com.matrix.multigpt.data.repository.SettingRepository
 import com.matrix.multigpt.util.handleStates
@@ -23,7 +27,8 @@ import kotlinx.coroutines.launch
 class ChatViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val chatRepository: ChatRepository,
-    private val settingRepository: SettingRepository
+    private val settingRepository: SettingRepository,
+    private val modelFetchService: ModelFetchService
 ) : ViewModel() {
     sealed class LoadingState {
         data object Idle : LoadingState()
@@ -48,6 +53,16 @@ class ChatViewModel @Inject constructor(
     // Enabled platforms list
     private val _enabledPlatformsInApp = MutableStateFlow(listOf<ApiType>())
     val enabledPlatformsInApp = _enabledPlatformsInApp.asStateFlow()
+    
+    // Model selection state
+    private val _currentModels = MutableStateFlow<Map<ApiType, String>>(emptyMap())
+    val currentModels = _currentModels.asStateFlow()
+    
+    private val _fetchedModels = MutableStateFlow<Map<ApiType, List<ModelInfo>>>(emptyMap())
+    val fetchedModels = _fetchedModels.asStateFlow()
+    
+    private val _modelFetchState = MutableStateFlow<Map<ApiType, ModelFetchResult>>(emptyMap())
+    val modelFetchState = _modelFetchState.asStateFlow()
 
     // List of question & answers (User, Assistant)
     private val _messages = MutableStateFlow(listOf<Message>())
@@ -391,8 +406,50 @@ class ChatViewModel @Inject constructor(
 
     private fun fetchEnabledPlatformsInApp() {
         viewModelScope.launch {
-            val enabled = settingRepository.fetchPlatforms().filter { it.enabled }.map { it.name }
+            val platforms = settingRepository.fetchPlatforms()
+            val enabled = platforms.filter { it.enabled }.map { it.name }
             _enabledPlatformsInApp.update { enabled }
+            
+            // Fetch current models for all enabled platforms
+            platforms.filter { it.enabled }.forEach { platform ->
+                platform.model?.let { model ->
+                    _currentModels.update { it + (platform.name to model) }
+                }
+            }
+        }
+    }
+    
+    fun fetchModelsForProvider(apiType: ApiType) {
+        viewModelScope.launch {
+            _modelFetchState.update { it + (apiType to ModelFetchResult.Loading) }
+            
+            val platforms = settingRepository.fetchPlatforms()
+            val platform = platforms.find { it.name == apiType }
+            
+            val apiUrl = platform?.apiUrl ?: ModelConstants.getDefaultAPIUrl(apiType)
+            val apiKey = platform?.token ?: ""
+            
+            val result = modelFetchService.fetchModels(apiType, apiUrl, apiKey)
+            _modelFetchState.update { it + (apiType to result) }
+            
+            if (result is ModelFetchResult.Success) {
+                _fetchedModels.update { it + (apiType to result.models) }
+            }
+        }
+    }
+    
+    fun updateSelectedModel(apiType: ApiType, model: String) {
+        viewModelScope.launch {
+            val platforms = settingRepository.fetchPlatforms()
+            val updatedPlatforms = platforms.map { platform ->
+                if (platform.name == apiType) {
+                    platform.copy(model = model)
+                } else {
+                    platform
+                }
+            }
+            settingRepository.updatePlatforms(updatedPlatforms)
+            _currentModels.update { it + (apiType to model) }
         }
     }
 
