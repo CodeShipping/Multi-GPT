@@ -22,13 +22,13 @@ MultiGPT allows users to communicate with multiple AI providers (OpenAI, Anthrop
 <div align="center">
 
 ### App Introduction & Setup
-|                            Getting Started                            |                               Settings                                |                              API Config                               |
-|:---------------------------------------------------------------------:|:---------------------------------------------------------------------:|:---------------------------------------------------------------------:|
-| <img src="metadata/en-US/images/phoneScreenshots/1.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/2.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/3.png" width="200"/> |
+|                                  Getting Started                                  |                                             Settings                                              |                                            API Config                                            |
+|:---------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------:|
+| <img src="metadata/en-US/images/phoneScreenshots/1-get-started.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/2-get-started-select-provider.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/2-5-select-platform-new-chat.png" width="200"/> |
 
-|                            Model Selection                            |                             Custom Prompt                             |                              Chat Screen                              |
-|:---------------------------------------------------------------------:|:---------------------------------------------------------------------:|:---------------------------------------------------------------------:|
-| <img src="metadata/en-US/images/phoneScreenshots/4.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/5.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/6.png" width="200"/> |
+|                                 Model Selection                                 |                                   Custom Prompt                                   |                                  Chat Screen                                   |
+|:-------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------:|:------------------------------------------------------------------------------:|
+| <img src="metadata/en-US/images/phoneScreenshots/3-chat-list.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/4-chat-screen.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/5-settings.png" width="200"/> |
 
 </div>
 
