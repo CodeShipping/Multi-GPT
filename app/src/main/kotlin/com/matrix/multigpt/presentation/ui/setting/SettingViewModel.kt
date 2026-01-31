@@ -185,13 +185,8 @@ class SettingViewModel @Inject constructor(
 
     fun updateBatchSize(batchSize: Int) {
         val index = _platformState.value.indexOfFirst { it.name == ApiType.LOCAL }
-        // 0 = Auto, otherwise 256, 512, 1024
-        val modifiedBatchSize = when {
-            batchSize == 0 -> 0 // Auto
-            batchSize < 384 -> 256
-            batchSize < 768 -> 512
-            else -> 1024
-        }
+        // 0 = Auto, otherwise any value in range 64-4096
+        val modifiedBatchSize = batchSize.coerceIn(0, 4096)
 
         if (index >= 0) {
             _platformState.update {
@@ -208,13 +203,8 @@ class SettingViewModel @Inject constructor(
 
     fun updateContextSize(contextSize: Int) {
         val index = _platformState.value.indexOfFirst { it.name == ApiType.LOCAL }
-        // Valid values: 1024, 2048, 4096, 8192
-        val modifiedContextSize = when {
-            contextSize < 1536 -> 1024
-            contextSize < 3072 -> 2048
-            contextSize < 6144 -> 4096
-            else -> 8192
-        }
+        // Valid range: 512-32768
+        val modifiedContextSize = contextSize.coerceIn(512, 32768)
 
         if (index >= 0) {
             _platformState.update {

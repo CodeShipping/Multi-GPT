@@ -829,14 +829,11 @@ private fun BatchSizeDialogContent(
     onConfirmRequest: (Int) -> Unit
 ) {
     val configuration = LocalConfiguration.current
+    val presetOptions = listOf(0, 256, 512, 1024, 2048)
+    val isCustom = batchSize !in presetOptions
     var selectedBatchSize by remember { mutableStateOf(batchSize) }
-    
-    val options = listOf(
-        0 to stringResource(R.string.preset_auto),
-        256 to "256 (${stringResource(R.string.preset_low_memory)})",
-        512 to "512 (${stringResource(R.string.preset_balanced)})",
-        1024 to "1024 (${stringResource(R.string.preset_max_performance)})"
-    )
+    var customSelected by remember { mutableStateOf(isCustom) }
+    var customValue by remember { mutableStateOf(if (isCustom) batchSize.toString() else "") }
 
     AlertDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -852,22 +849,77 @@ private fun BatchSizeDialogContent(
                 Column(
                     modifier = Modifier.padding(top = 16.dp)
                 ) {
-                    options.forEach { (value, label) ->
-                        RadioItem(
-                            value = value.toString(),
-                            selected = selectedBatchSize == value,
-                            title = label,
-                            description = null,
-                            onSelected = { selectedBatchSize = value }
-                        )
-                    }
+                    RadioItem(
+                        value = "0",
+                        selected = selectedBatchSize == 0 && !customSelected,
+                        title = stringResource(R.string.preset_auto),
+                        description = null,
+                        onSelected = { selectedBatchSize = 0; customSelected = false }
+                    )
+                    RadioItem(
+                        value = "256",
+                        selected = selectedBatchSize == 256 && !customSelected,
+                        title = "256 (${stringResource(R.string.preset_low_memory)})",
+                        description = null,
+                        onSelected = { selectedBatchSize = 256; customSelected = false }
+                    )
+                    RadioItem(
+                        value = "512",
+                        selected = selectedBatchSize == 512 && !customSelected,
+                        title = "512 (${stringResource(R.string.preset_balanced)})",
+                        description = null,
+                        onSelected = { selectedBatchSize = 512; customSelected = false }
+                    )
+                    RadioItem(
+                        value = "1024",
+                        selected = selectedBatchSize == 1024 && !customSelected,
+                        title = "1024 (${stringResource(R.string.preset_max_performance)})",
+                        description = null,
+                        onSelected = { selectedBatchSize = 1024; customSelected = false }
+                    )
+                    RadioItem(
+                        value = "2048",
+                        selected = selectedBatchSize == 2048 && !customSelected,
+                        title = "2048 (High RAM devices)",
+                        description = null,
+                        onSelected = { selectedBatchSize = 2048; customSelected = false }
+                    )
+                    RadioItem(
+                        value = customValue,
+                        selected = customSelected,
+                        title = stringResource(R.string.custom),
+                        description = null,
+                        onSelected = { customSelected = true }
+                    )
+                    OutlinedTextField(
+                        modifier = Modifier
+                            .padding(start = 24.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        enabled = customSelected,
+                        value = customValue,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        onValueChange = { customValue = it },
+                        label = { Text(stringResource(R.string.batch_size)) },
+                        placeholder = { Text("e.g. 128, 384, 768, 1536...") },
+                        supportingText = { Text("Range: 64 - 4096") }
+                    )
                 }
             }
         },
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(
-                onClick = { onConfirmRequest(selectedBatchSize) }
+                enabled = if (customSelected) customValue.toIntOrNull() in 64..4096 else true,
+                onClick = {
+                    val finalValue = if (customSelected) {
+                        customValue.toIntOrNull()?.coerceIn(64, 4096) ?: 512
+                    } else {
+                        selectedBatchSize
+                    }
+                    onConfirmRequest(finalValue)
+                }
             ) {
                 Text(stringResource(R.string.confirm))
             }
@@ -889,14 +941,11 @@ private fun ContextSizeDialogContent(
     onConfirmRequest: (Int) -> Unit
 ) {
     val configuration = LocalConfiguration.current
+    val presetOptions = listOf(1024, 2048, 4096, 8192, 16384)
+    val isCustom = contextSize !in presetOptions
     var selectedContextSize by remember { mutableStateOf(contextSize) }
-    
-    val options = listOf(
-        1024 to "1024 tokens (Fast, short conversations)",
-        2048 to "2048 tokens (Balanced - recommended)",
-        4096 to "4096 tokens (Long conversations)",
-        8192 to "8192 tokens (Maximum, complex tasks)"
-    )
+    var customSelected by remember { mutableStateOf(isCustom) }
+    var customValue by remember { mutableStateOf(if (isCustom) contextSize.toString() else "") }
 
     AlertDialog(
         properties = DialogProperties(usePlatformDefaultWidth = false),
@@ -912,22 +961,77 @@ private fun ContextSizeDialogContent(
                 Column(
                     modifier = Modifier.padding(top = 16.dp)
                 ) {
-                    options.forEach { (value, label) ->
-                        RadioItem(
-                            value = value.toString(),
-                            selected = selectedContextSize == value,
-                            title = label,
-                            description = null,
-                            onSelected = { selectedContextSize = value }
-                        )
-                    }
+                    RadioItem(
+                        value = "1024",
+                        selected = selectedContextSize == 1024 && !customSelected,
+                        title = "1024 tokens (Fast, short conversations)",
+                        description = null,
+                        onSelected = { selectedContextSize = 1024; customSelected = false }
+                    )
+                    RadioItem(
+                        value = "2048",
+                        selected = selectedContextSize == 2048 && !customSelected,
+                        title = "2048 tokens (Balanced - recommended)",
+                        description = null,
+                        onSelected = { selectedContextSize = 2048; customSelected = false }
+                    )
+                    RadioItem(
+                        value = "4096",
+                        selected = selectedContextSize == 4096 && !customSelected,
+                        title = "4096 tokens (Long conversations)",
+                        description = null,
+                        onSelected = { selectedContextSize = 4096; customSelected = false }
+                    )
+                    RadioItem(
+                        value = "8192",
+                        selected = selectedContextSize == 8192 && !customSelected,
+                        title = "8192 tokens (Complex tasks)",
+                        description = null,
+                        onSelected = { selectedContextSize = 8192; customSelected = false }
+                    )
+                    RadioItem(
+                        value = "16384",
+                        selected = selectedContextSize == 16384 && !customSelected,
+                        title = "16384 tokens (Maximum - high RAM)",
+                        description = null,
+                        onSelected = { selectedContextSize = 16384; customSelected = false }
+                    )
+                    RadioItem(
+                        value = customValue,
+                        selected = customSelected,
+                        title = stringResource(R.string.custom),
+                        description = null,
+                        onSelected = { customSelected = true }
+                    )
+                    OutlinedTextField(
+                        modifier = Modifier
+                            .padding(start = 24.dp)
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        enabled = customSelected,
+                        value = customValue,
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        onValueChange = { customValue = it },
+                        label = { Text(stringResource(R.string.context_size)) },
+                        placeholder = { Text("e.g. 3072, 6144, 12288...") },
+                        supportingText = { Text("Range: 512 - 32768") }
+                    )
                 }
             }
         },
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(
-                onClick = { onConfirmRequest(selectedContextSize) }
+                enabled = if (customSelected) customValue.toIntOrNull() in 512..32768 else true,
+                onClick = {
+                    val finalValue = if (customSelected) {
+                        customValue.toIntOrNull()?.coerceIn(512, 32768) ?: 2048
+                    } else {
+                        selectedContextSize
+                    }
+                    onConfirmRequest(finalValue)
+                }
             ) {
                 Text(stringResource(R.string.confirm))
             }
