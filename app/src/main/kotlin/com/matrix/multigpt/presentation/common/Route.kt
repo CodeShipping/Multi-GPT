@@ -28,6 +28,11 @@ object Route {
     const val GROQ_SETTINGS = "groq_settings"
     const val OLLAMA_SETTINGS = "ollama_settings"
     const val BEDROCK_SETTINGS = "bedrock_settings"
+    const val LOCAL_SETTINGS = "local_settings"
     const val ABOUT_PAGE = "about"
     const val LICENSE = "license"
+    
+    // Local AI
+    const val LOCAL_AI_ENTRY = "local_ai_entry"
+    const val LOCAL_AI_MODELS = "local_ai_models"
 }

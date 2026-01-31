@@ -28,6 +28,8 @@ android {
         }
     }
 
+    dynamicFeatures += setOf(":localinference")
+
     androidResources {
         @file:Suppress("UnstableApiUsage") // Incubating class
         generateLocaleConfig = true
@@ -124,10 +126,15 @@ dependencies {
     // AdMob
     implementation(libs.play.services.ads)
 
+    // Play Feature Delivery
+    implementation(libs.play.feature.delivery)
+    implementation(libs.play.feature.delivery.ktx)
+
     // Firebase
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.database)
 
     // Test
     testImplementation(libs.junit)

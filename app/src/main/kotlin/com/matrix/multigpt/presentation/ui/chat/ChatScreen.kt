@@ -331,6 +331,7 @@ fun ChatScreen(
                                     ApiType.GROQ -> groqMessage
                                     ApiType.OLLAMA -> ollamaMessage
                                     ApiType.BEDROCK -> bedrockMessage
+                                    ApiType.LOCAL -> ollamaMessage // TODO: Add localMessage
                                 }
 
                                 val loadingState = when (apiType) {
@@ -340,6 +341,7 @@ fun ChatScreen(
                                     ApiType.GROQ -> groqLoadingState
                                     ApiType.OLLAMA -> ollamaLoadingState
                                     ApiType.BEDROCK -> bedrockLoadingState
+                                    ApiType.LOCAL -> ollamaLoadingState // TODO: Add localLoadingState
                                 }
 
                                 // Show typing indicator if loading and no content yet

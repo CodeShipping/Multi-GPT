@@ -51,7 +51,8 @@ fun SettingScreen(
     settingViewModel: SettingViewModel = hiltViewModel(),
     onNavigationClick: () -> Unit,
     onNavigateToPlatformSetting: (ApiType) -> Unit,
-    onNavigateToAboutPage: () -> Unit
+    onNavigateToAboutPage: () -> Unit,
+    onNavigateToLocalAI: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     val scrollBehavior = pinnedExitUntilCollapsedScrollBehavior(
@@ -75,7 +76,8 @@ fun SettingScreen(
                 .verticalScroll(scrollState)
         ) {
             ThemeSetting { settingViewModel.openThemeDialog() }
-            ApiType.entries.forEach { apiType ->
+            // Cloud-based API platforms (exclude LOCAL since it has dedicated settings)
+            ApiType.entries.filter { it != ApiType.LOCAL }.forEach { apiType ->
                 SettingItem(
                     title = getPlatformSettingTitle(apiType),
                     description = getPlatformSettingDescription(apiType),
@@ -84,6 +86,10 @@ fun SettingScreen(
                     showLeadingIcon = false
                 )
             }
+            
+            // Local AI Models - On-device inference (separate dedicated settings)
+            LocalAISettingItem(onItemClick = onNavigateToLocalAI)
+            
             AboutPageItem(onItemClick = onNavigateToAboutPage)
 
             if (dialogState.isThemeDialogOpen) {
@@ -133,6 +139,19 @@ fun ThemeSetting(
         description = stringResource(R.string.theme_description),
         onItemClick = onItemClick,
         showTrailingIcon = false,
+        showLeadingIcon = false
+    )
+}
+
+@Composable
+fun LocalAISettingItem(
+    onItemClick: () -> Unit
+) {
+    SettingItem(
+        title = stringResource(R.string.local_ai_models),
+        description = stringResource(R.string.local_ai_description),
+        onItemClick = onItemClick,
+        showTrailingIcon = true,
         showLeadingIcon = false
     )
 }

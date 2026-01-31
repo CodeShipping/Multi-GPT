@@ -117,6 +117,8 @@
     <string name="top_p_setting_description">In nucleus sampling, we compute the cumulative distribution over all the options for each subsequent token in decreasing probability order and cut it off once it reaches a particular probability specified by this value.\nMost models usually recommend altering this or temperature but not both.</string>
     <string name="about">About</string>
     <string name="about_description">Version, License, Feedback</string>
+    <string name="local_ai_models">Local AI Models</string>
+    <string name="local_ai_description">Run AI models on your device for offline, private chat</string>
     <string name="version">Version</string>
     <string name="license">License</string>
     <string name="github" translatable="false">GitHub</string>
@@ -222,4 +224,19 @@
     <string name="export_chat" translatable="false">Export Chat</string>
     <string name="fetching_models" translatable="false">Fetching models…</string>
     <string name="using_fallback_models" translatable="false">Using fallback models</string>
+    
+    <!-- Local AI Platform -->
+    <string name="local_ai" translatable="false">Local AI</string>
+    <string name="local_ai_platform_description">Run AI models on your device. Private and offline.</string>
+    <string name="local_ai_model">Selected Model</string>
+    <string name="local_ai_help" translatable="false">https://github.com/CodeShipping/Multi-GPT#local-ai</string>
+    <string name="select_local_model">Select Local Model</string>
+    <string name="select_local_model_description">Choose a downloaded model to use for local inference. Models run entirely on your device.</string>
+    <string name="local_ai_setting">Local AI Settings</string>
+    <string name="local_ai_setting_description">Manage local models, download new ones</string>
+    <string name="local_ai_brand_text" translatable="false">Powered by Local AI</string>
+    <string name="local_ai_not_configured">Local AI is not configured. Please download a model first.</string>
+    <string name="local_ai_model_not_found">Selected model not found. Please select another model.</string>
+    <string name="local_ai_loading_model">Loading model…</string>
+    <string name="local_ai_generating">Generating response…</string>
 </resources>

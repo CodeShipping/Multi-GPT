@@ -15,7 +15,8 @@ fun getPlatformTitleResources(): Map<ApiType, String> = mapOf(
     ApiType.GOOGLE to stringResource(R.string.google),
     ApiType.GROQ to stringResource(R.string.groq),
     ApiType.OLLAMA to stringResource(R.string.ollama),
-    ApiType.BEDROCK to stringResource(R.string.bedrock)
+    ApiType.BEDROCK to stringResource(R.string.bedrock),
+    ApiType.LOCAL to stringResource(R.string.local_ai)
 )
 
 @Composable
@@ -25,7 +26,8 @@ fun getPlatformDescriptionResources(): Map<ApiType, String> = mapOf(
     ApiType.GOOGLE to stringResource(R.string.google_description),
     ApiType.GROQ to stringResource(R.string.groq_description),
     ApiType.OLLAMA to stringResource(R.string.ollama_description),
-    ApiType.BEDROCK to stringResource(R.string.bedrock_description)
+    ApiType.BEDROCK to stringResource(R.string.bedrock_description),
+    ApiType.LOCAL to stringResource(R.string.local_ai_platform_description)
 )
 
 @Composable
@@ -35,7 +37,8 @@ fun getPlatformAPILabelResources(): Map<ApiType, String> = mapOf(
     ApiType.GOOGLE to stringResource(R.string.gemini_api_key),
     ApiType.GROQ to stringResource(R.string.groq_api_key),
     ApiType.OLLAMA to stringResource(R.string.ollama_api_key),
-    ApiType.BEDROCK to stringResource(R.string.bedrock_credentials)
+    ApiType.BEDROCK to stringResource(R.string.bedrock_credentials),
+    ApiType.LOCAL to stringResource(R.string.local_ai_model)
 )
 
 @Composable
@@ -45,7 +48,8 @@ fun getPlatformHelpLinkResources(): Map<ApiType, String> = mapOf(
     ApiType.GOOGLE to stringResource(R.string.google_api_help),
     ApiType.GROQ to stringResource(R.string.groq_api_help),
     ApiType.OLLAMA to stringResource(R.string.ollama_api_help),
-    ApiType.BEDROCK to stringResource(R.string.bedrock_api_help)
+    ApiType.BEDROCK to stringResource(R.string.bedrock_api_help),
+    ApiType.LOCAL to stringResource(R.string.local_ai_help)
 )
 
 @Composable
@@ -124,6 +128,7 @@ fun getAPIModelSelectTitle(apiType: ApiType) = when (apiType) {
     ApiType.GROQ -> stringResource(R.string.select_groq_model)
     ApiType.OLLAMA -> stringResource(R.string.select_ollama_model)
     ApiType.BEDROCK -> stringResource(R.string.select_bedrock_model)
+    ApiType.LOCAL -> stringResource(R.string.select_local_model)
 }
 
 @Composable
@@ -134,6 +139,7 @@ fun getAPIModelSelectDescription(apiType: ApiType) = when (apiType) {
     ApiType.GROQ -> stringResource(R.string.select_groq_model_description)
     ApiType.OLLAMA -> stringResource(id = R.string.select_ollama_model_description)
     ApiType.BEDROCK -> stringResource(R.string.select_bedrock_model_description)
+    ApiType.LOCAL -> stringResource(R.string.select_local_model_description)
 }
 
 @Composable
@@ -157,6 +163,7 @@ fun getPlatformSettingTitle(apiType: ApiType) = when (apiType) {
     ApiType.GROQ -> stringResource(R.string.groq_setting)
     ApiType.OLLAMA -> stringResource(R.string.ollama_setting)
     ApiType.BEDROCK -> stringResource(R.string.bedrock_setting)
+    ApiType.LOCAL -> stringResource(R.string.local_ai_setting)
 }
 
 @Composable
@@ -167,6 +174,7 @@ fun getPlatformSettingDescription(apiType: ApiType) = when (apiType) {
     ApiType.GROQ -> stringResource(R.string.platform_setting_description)
     ApiType.OLLAMA -> stringResource(R.string.platform_setting_description)
     ApiType.BEDROCK -> stringResource(R.string.platform_setting_description)
+    ApiType.LOCAL -> stringResource(R.string.local_ai_setting_description)
 }
 
 @Composable
@@ -177,4 +185,5 @@ fun getPlatformAPIBrandText(apiType: ApiType) = when (apiType) {
     ApiType.GROQ -> stringResource(R.string.groq_brand_text)
     ApiType.OLLAMA -> stringResource(R.string.ollama_brand_text)
     ApiType.BEDROCK -> stringResource(R.string.bedrock_brand_text)
+    ApiType.LOCAL -> stringResource(R.string.local_ai_brand_text)
 }

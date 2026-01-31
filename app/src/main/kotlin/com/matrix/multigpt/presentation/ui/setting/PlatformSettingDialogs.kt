@@ -347,6 +347,7 @@ private fun ModelDialog(
         ApiType.GROQ -> groqModels
         ApiType.OLLAMA -> ollamaModels
         ApiType.BEDROCK -> bedrockModels
+        ApiType.LOCAL -> linkedSetOf() // Local models are managed separately
     }
     val fallbackModels = when (apiType) {
         ApiType.OPENAI -> generateOpenAIModelList(models = modelList)
@@ -355,6 +356,7 @@ private fun ModelDialog(
         ApiType.GROQ -> generateGroqModelList(models = modelList)
         ApiType.OLLAMA -> listOf()
         ApiType.BEDROCK -> generateBedrockModelList(models = modelList)
+        ApiType.LOCAL -> listOf() // Local models are selected via Local AI settings
     }
     
     val availableModels = displayModels ?: fallbackModels
@@ -523,6 +525,7 @@ private fun TemperatureDialog(
                         converted?.let {
                             sliderTemperature = when (apiType) {
                                 ApiType.ANTHROPIC -> it.coerceIn(0F, 1F)
+                                ApiType.LOCAL -> it.coerceIn(0F, 2F)
                                 else -> it.coerceIn(0F, 2F)
                             }
                         }
@@ -539,10 +542,12 @@ private fun TemperatureDialog(
                     value = sliderTemperature,
                     valueRange = when (apiType) {
                         ApiType.ANTHROPIC -> 0F..1F
+                        ApiType.LOCAL -> 0F..2F
                         else -> 0F..2F
                     },
                     steps = when (apiType) {
                         ApiType.ANTHROPIC -> 10 - 1
+                        ApiType.LOCAL -> 20 - 1
                         else -> 20 - 1
                     },
                     onValueChange = { t ->

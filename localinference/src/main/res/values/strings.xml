@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Feature Title -->
+    <string name="local_inference_title">Local AI Models</string>
+    <string name="local_inference_subtitle">Run AI models on your device</string>
+
+    <!-- Model List Screen -->
+    <string name="model_list_title">Available Models</string>
+    <string name="model_list_empty">No models found</string>
+    <string name="model_list_loading">Loading models…</string>
+    <string name="model_list_error">Failed to load models</string>
+    <string name="model_list_retry">Retry</string>
+    <string name="model_list_search_hint">Search models…</string>
+
+    <!-- Filters -->
+    <string name="filter_all">All</string>
+    <string name="filter_recommended">Recommended</string>
+    <string name="filter_downloaded">Downloaded</string>
+    <string name="filter_by_family">By Family</string>
+    <string name="filter_by_use_case">By Use Case</string>
+    <string name="filter_by_performance">By Performance</string>
+
+    <!-- Performance Ratings -->
+    <string name="performance_fast">Fast</string>
+    <string name="performance_balanced">Balanced</string>
+    <string name="performance_quality">Quality</string>
+    <string name="performance_demanding">Demanding</string>
+
+    <!-- Use Cases -->
+    <string name="use_case_chat">Chat</string>
+    <string name="use_case_coding">Coding</string>
+    <string name="use_case_creative">Creative</string>
+    <string name="use_case_summarization">Summarization</string>
+    <string name="use_case_translation">Translation</string>
+    <string name="use_case_question_answering">Q&amp;A</string>
+    <string name="use_case_math">Math</string>
+    <string name="use_case_general">General</string>
+
+    <!-- Model Card -->
+    <string name="model_size">Size: %s</string>
+    <string name="model_parameters">Parameters: %s</string>
+    <string name="model_context_length">Context: %d tokens</string>
+    <string name="model_quantization">Quantization: %s</string>
+    <string name="model_memory_required">Memory: %s</string>
+    <string name="model_tokens_per_second">Speed: %.1f tok/s</string>
+    <string name="model_recommended">Recommended</string>
+
+    <!-- Download States -->
+    <string name="download_not_downloaded">Not downloaded</string>
+    <string name="download_downloading">Downloading…</string>
+    <string name="download_paused">Paused</string>
+    <string name="download_downloaded">Downloaded</string>
+    <string name="download_loading">Loading…</string>
+    <string name="download_loaded">Loaded</string>
+    <string name="download_error">Error</string>
+    <string name="download_progress">%s / %s (%d%%)</string>
+
+    <!-- Actions -->
+    <string name="action_download">Download</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_start_chat">Start Chat</string>
+    <string name="action_refresh">Refresh</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_delete_title">Delete Model?</string>
+    <string name="dialog_delete_message">Are you sure you want to delete %s? You can download it again later.</string>
+    <string name="dialog_delete_confirm">Delete</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <!-- Snackbars/Toasts -->
+    <string name="snackbar_download_started">Download started</string>
+    <string name="snackbar_download_complete">Download complete</string>
+    <string name="snackbar_download_failed">Download failed: %s</string>
+    <string name="snackbar_delete_success">Model deleted</string>
+
+    <!-- Model Detail Screen -->
+    <string name="model_detail_title">Model Details</string>
+    <string name="model_detail_description">Description</string>
+    <string name="model_detail_performance">Performance</string>
+    <string name="model_detail_use_cases">Use Cases</string>
+    <string name="model_detail_technical">Technical Details</string>
+    <string name="model_detail_about_family">About %s</string>
+    <string name="model_detail_developer">Developer: %s</string>
+    <string name="model_detail_license">License: %s</string>
+
+    <!-- Feature Download -->
+    <string name="feature_download_title">Local AI Feature</string>
+    <string name="feature_download_message">This feature allows you to run AI models locally on your device. It requires an additional download.</string>
+    <string name="feature_download_size">Download size: %s</string>
+    <string name="feature_download_install">Install Feature</string>
+    <string name="feature_downloading">Installing feature…</string>
+    <string name="feature_download_failed">Failed to install feature</string>
+
+    <!-- Accessibility -->
+    <string name="cd_model_icon">Model icon</string>
+    <string name="cd_download_progress">Download progress: %d percent</string>
+    <string name="cd_filter_button">Filter models</string>
+    <string name="cd_search_button">Search models</string>
+    <string name="cd_back_button">Go back</string>
+    <string name="cd_refresh_button">Refresh model list</string>
+</resources>

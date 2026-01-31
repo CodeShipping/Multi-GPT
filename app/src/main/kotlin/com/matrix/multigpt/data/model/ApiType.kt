@@ -6,5 +6,6 @@ enum class ApiType {
     BEDROCK,
     ANTHROPIC,
     GOOGLE,
-    OLLAMA
+    OLLAMA,
+    LOCAL
 }

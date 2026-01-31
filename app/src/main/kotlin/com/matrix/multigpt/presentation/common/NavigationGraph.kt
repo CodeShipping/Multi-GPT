@@ -17,6 +17,8 @@ import androidx.navigation.navigation
 import com.matrix.multigpt.data.model.ApiType
 import com.matrix.multigpt.presentation.ui.chat.ChatScreen
 import com.matrix.multigpt.presentation.ui.home.HomeScreen
+import com.matrix.multigpt.presentation.ui.localai.LocalAIEntryScreen
+import com.matrix.multigpt.presentation.ui.localai.LocalAIModelsScreen
 import com.matrix.multigpt.presentation.ui.setting.AboutScreen
 import com.matrix.multigpt.presentation.ui.setting.LicenseScreen
 import com.matrix.multigpt.presentation.ui.setting.PlatformSettingScreen
@@ -254,9 +256,11 @@ fun NavGraphBuilder.settingNavigation(navController: NavHostController) {
                         ApiType.GROQ -> navController.navigate(Route.GROQ_SETTINGS)
                         ApiType.OLLAMA -> navController.navigate(Route.OLLAMA_SETTINGS)
                         ApiType.BEDROCK -> navController.navigate(Route.BEDROCK_SETTINGS)
+                        ApiType.LOCAL -> navController.navigate(Route.LOCAL_AI_ENTRY)
                     }
                 },
-                onNavigateToAboutPage = { navController.navigate(Route.ABOUT_PAGE) }
+                onNavigateToAboutPage = { navController.navigate(Route.ABOUT_PAGE) },
+                onNavigateToLocalAI = { navController.navigate(Route.LOCAL_AI_ENTRY) }
             )
         }
         composable(Route.OPENAI_SETTINGS) {
@@ -328,5 +332,27 @@ fun NavGraphBuilder.settingNavigation(navController: NavHostController) {
         composable(Route.LICENSE) {
             LicenseScreen(onNavigationClick = { navController.navigateUp() })
         }
+        composable(Route.LOCAL_AI_ENTRY) {
+            LocalAIEntryScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onFeatureReady = {
+                    navController.navigate(Route.LOCAL_AI_MODELS) {
+                        popUpTo(Route.LOCAL_AI_ENTRY) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Route.LOCAL_AI_MODELS) {
+            // Loads from the dynamic feature module via reflection
+            LocalAIModelsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onNavigateToChat = { modelId: String, modelPath: String ->
+                    // TODO: Navigate to local chat with the selected model
+                    navController.navigateUp()
+                }
+            )
+        }
     }
 }
+
+// Removed unused placeholder functions - using direct import now

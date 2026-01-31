@@ -538,6 +538,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqLoadingState
             ApiType.OLLAMA -> _ollamaLoadingState
             ApiType.BEDROCK -> _bedrockLoadingState
+            ApiType.LOCAL -> _ollamaLoadingState // TODO: Add _localLoadingState
         }
 
         if (retryingState == LoadingState.Loading) return
@@ -550,6 +551,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqMessage.update { message }
             ApiType.OLLAMA -> _ollamaMessage.update { message }
             ApiType.BEDROCK -> _bedrockMessage.update { message }
+            ApiType.LOCAL -> _ollamaMessage.update { message } // TODO: Add _localMessage
         }
     }
 
@@ -590,6 +592,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqLoadingState.update { loadingState }
             ApiType.OLLAMA -> _ollamaLoadingState.update { loadingState }
             ApiType.BEDROCK -> _bedrockLoadingState.update { loadingState }
+            ApiType.LOCAL -> _ollamaLoadingState.update { loadingState } // TODO: Add _localLoadingState
         }
 
         var result = true
@@ -601,6 +604,7 @@ class ChatViewModel @Inject constructor(
                 ApiType.GROQ -> _groqLoadingState
                 ApiType.OLLAMA -> _ollamaLoadingState
                 ApiType.BEDROCK -> _bedrockLoadingState
+                ApiType.LOCAL -> _ollamaLoadingState // TODO: Add _localLoadingState
             }
 
             result = result && (state.value is LoadingState.Idle)

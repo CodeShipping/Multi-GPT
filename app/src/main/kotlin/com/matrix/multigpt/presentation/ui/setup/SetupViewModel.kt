@@ -41,7 +41,8 @@ class SetupViewModel @Inject constructor(
             Platform(ApiType.BEDROCK),
             Platform(ApiType.ANTHROPIC),
             Platform(ApiType.GOOGLE),
-            Platform(ApiType.OLLAMA)
+            Platform(ApiType.OLLAMA),
+            Platform(ApiType.LOCAL)
         )
     )
     val platformState: StateFlow<List<Platform>> = _platformState.asStateFlow()
@@ -209,6 +210,7 @@ class SetupViewModel @Inject constructor(
             ApiType.GROQ -> groqModels
             ApiType.OLLAMA -> ollamaModels
             ApiType.BEDROCK -> bedrockModels
+            ApiType.LOCAL -> linkedSetOf<String>() // Local models are managed via Local AI settings
         }.toList()
 
         if (modelList.size <= defaultModelIndex) {
@@ -247,6 +249,7 @@ class SetupViewModel @Inject constructor(
             ApiType.GROQ -> groqModels.toList()
             ApiType.OLLAMA -> ollamaModels.toList()
             ApiType.BEDROCK -> bedrockModels.toList()
+            ApiType.LOCAL -> emptyList() // Local models are managed via Local AI settings
         }
     }
 }

@@ -40,6 +40,7 @@ class ModelFetchServiceImpl @Inject constructor(
                 ApiType.ANTHROPIC -> fetchAnthropicModels()
                 ApiType.OLLAMA -> fetchOllamaModels(apiUrl)
                 ApiType.BEDROCK -> fetchBedrockModels()
+                ApiType.LOCAL -> fetchLocalModels()
             }
         } catch (e: Exception) {
             ModelFetchResult.Error("Failed to fetch models: ${e.message}")
@@ -274,6 +275,12 @@ class ModelFetchServiceImpl @Inject constructor(
             )
         )
         return ModelFetchResult.Success(models)
+    }
+
+    private suspend fun fetchLocalModels(): ModelFetchResult {
+        // Local models are managed by the dynamic feature module
+        // Return empty list since models are selected via the Local AI settings
+        return ModelFetchResult.Success(emptyList())
     }
 
     private fun formatSize(bytes: Long): String {

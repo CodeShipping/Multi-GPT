@@ -97,6 +97,7 @@ fun PlatformSettingScreen(
                 ApiType.GROQ -> ModelConstants.DEFAULT_PROMPT
                 ApiType.OLLAMA -> ModelConstants.DEFAULT_PROMPT
                 ApiType.BEDROCK -> ModelConstants.DEFAULT_PROMPT
+                ApiType.LOCAL -> ModelConstants.DEFAULT_PROMPT
             }
 
             PreferenceSwitchWithContainer(

@@ -37,6 +37,7 @@ object ModelConstants {
         ApiType.GROQ -> GROQ_API_URL
         ApiType.OLLAMA -> ""
         ApiType.BEDROCK -> BEDROCK_BASE_URL
+        ApiType.LOCAL -> "" // Local models don't need API URL
     }
 
     const val ANTHROPIC_MAXIMUM_TOKEN = 4096
