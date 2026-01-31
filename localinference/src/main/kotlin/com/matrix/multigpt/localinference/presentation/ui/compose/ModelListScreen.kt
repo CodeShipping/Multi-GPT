@@ -1,5 +1,8 @@
 package com.matrix.multigpt.localinference.presentation.ui.compose
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,6 +39,16 @@ fun ModelListScreen(
     
     var showDeleteDialog by remember { mutableStateOf<String?>(null) }
     var showFilterSheet by remember { mutableStateOf(false) }
+    var importProgress by remember { mutableStateOf<Triple<Int, Int, String>?>(null) }
+
+    // File picker launcher for importing GGUF files
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            viewModel.onEvent(ModelListEvent.ImportModels(uris))
+        }
+    }
 
     // Handle effects
     LaunchedEffect(Unit) {
@@ -59,6 +72,15 @@ fun ModelListScreen(
                 is ModelListEffect.ShowDeleteConfirmation -> {
                     showDeleteDialog = effect.modelId
                 }
+                is ModelListEffect.ShowImportSuccess -> {
+                    importProgress = null
+                    snackbarHostState.showSnackbar(
+                        "${effect.count} model${if (effect.count > 1) "s" else ""} imported successfully"
+                    )
+                }
+                is ModelListEffect.ShowImportProgress -> {
+                    importProgress = Triple(effect.current, effect.total, effect.fileName)
+                }
             }
         }
     }
@@ -76,6 +98,17 @@ fun ModelListScreen(
                     }
                 },
                 actions = {
+                    // Import GGUF button
+                    IconButton(
+                        onClick = {
+                            filePickerLauncher.launch(arrayOf("*/*"))
+                        }
+                    ) {
+                        Icon(
+                            Icons.Filled.Add,
+                            contentDescription = stringResource(R.string.cd_import_button)
+                        )
+                    }
                     IconButton(onClick = { showFilterSheet = true }) {
                         Icon(
                             Icons.Filled.FilterList,
@@ -161,6 +194,31 @@ fun ModelListScreen(
                 showFilterSheet = false
             },
             onDismiss = { showFilterSheet = false }
+        )
+    }
+
+    // Import Progress Dialog
+    importProgress?.let { (current, total, fileName) ->
+        AlertDialog(
+            onDismissRequest = { /* Non-dismissible */ },
+            title = { Text("Importing Models") },
+            text = {
+                Column {
+                    Text("Importing $current of $total...")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = fileName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    LinearProgressIndicator(
+                        progress = { current.toFloat() / total },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = { }
         )
     }
 }

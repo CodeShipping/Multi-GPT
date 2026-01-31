@@ -1,5 +1,6 @@
 package com.matrix.multigpt.localinference.data.repository
 
+import android.net.Uri
 import com.matrix.multigpt.localinference.data.model.LocalModel
 import com.matrix.multigpt.localinference.data.model.LocalModelState
 import com.matrix.multigpt.localinference.data.model.ModelFamily
@@ -96,4 +97,20 @@ interface LocalModelRepository {
      * Check if a model is downloaded.
      */
     suspend fun isModelDownloaded(modelId: String): Boolean
+
+    /**
+     * Import GGUF model files from external storage.
+     * @param uris List of content URIs pointing to GGUF files
+     * @param onProgress Callback for import progress (current, total, fileName)
+     * @return List of imported model IDs
+     */
+    suspend fun importModels(
+        uris: List<Uri>,
+        onProgress: (current: Int, total: Int, fileName: String) -> Unit = { _, _, _ -> }
+    ): List<String>
+
+    /**
+     * Get all imported (user-added) models.
+     */
+    suspend fun getImportedModels(): List<LocalModel>
 }

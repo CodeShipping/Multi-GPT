@@ -107,6 +107,7 @@ sealed class ModelListEvent {
     data class CancelDownload(val modelId: String) : ModelListEvent()
     data class DeleteModel(val modelId: String) : ModelListEvent()
     data class SelectModel(val modelId: String) : ModelListEvent()
+    data class ImportModels(val uris: List<android.net.Uri>) : ModelListEvent()
 }
 
 /**
@@ -119,4 +120,6 @@ sealed class ModelListEffect {
     data object ShowDownloadStarted : ModelListEffect()
     data object ShowDownloadComplete : ModelListEffect()
     data class ShowDeleteConfirmation(val modelId: String) : ModelListEffect()
+    data class ShowImportSuccess(val count: Int) : ModelListEffect()
+    data class ShowImportProgress(val current: Int, val total: Int, val fileName: String) : ModelListEffect()
 }

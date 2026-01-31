@@ -240,6 +240,19 @@ class ModelDownloadManager @Inject constructor(
     }
 
     /**
+     * Mark an imported model as downloaded (for models imported from external storage).
+     */
+    fun markAsDownloaded(modelId: String, localPath: String, fileSize: Long) {
+        updateState(
+            modelId = modelId,
+            status = ModelStatus.DOWNLOADED,
+            downloadedBytes = fileSize,
+            totalBytes = fileSize,
+            localPath = localPath
+        )
+    }
+
+    /**
      * Get the file where the model will be stored.
      */
     private fun getModelFile(model: LocalModel): File {

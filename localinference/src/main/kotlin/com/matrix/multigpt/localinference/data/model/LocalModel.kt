@@ -19,7 +19,8 @@ data class LocalModel(
     val parameters: String, // e.g., "1B", "3B", "7B"
     val contextLength: Int,
     val familyId: String,
-    val isRecommended: Boolean = false
+    val isRecommended: Boolean = false,
+    val isImported: Boolean = false // True if imported from local storage
 )
 
 /**

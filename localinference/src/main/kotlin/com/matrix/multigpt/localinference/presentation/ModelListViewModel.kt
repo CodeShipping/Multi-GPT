@@ -1,5 +1,6 @@
 package com.matrix.multigpt.localinference.presentation
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.matrix.multigpt.localinference.data.model.ModelStatus
@@ -45,6 +46,7 @@ class ModelListViewModel @Inject constructor(
             is ModelListEvent.CancelDownload -> cancelDownload(event.modelId)
             is ModelListEvent.DeleteModel -> deleteModel(event.modelId)
             is ModelListEvent.SelectModel -> selectModel(event.modelId)
+            is ModelListEvent.ImportModels -> importModels(event.uris)
         }
     }
 
@@ -204,6 +206,47 @@ class ModelListViewModel @Inject constructor(
                     // Show model detail/download screen
                     _effects.send(ModelListEffect.NavigateToModelDetail(modelId))
                 }
+            }
+        }
+    }
+
+    private fun importModels(uris: List<Uri>) {
+        viewModelScope.launch {
+            try {
+                _uiState.update { it.copy(isLoading = true) }
+                
+                val importedIds = repository.importModels(uris) { current, total, fileName ->
+                    viewModelScope.launch {
+                        _effects.send(ModelListEffect.ShowImportProgress(current, total, fileName))
+                    }
+                }
+                
+                if (importedIds.isNotEmpty()) {
+                    // Reload models to include imported ones
+                    val models = repository.getModels()
+                    val importedModels = repository.getImportedModels()
+                    val allModels = models + importedModels.filter { imported -> 
+                        models.none { it.id == imported.id } 
+                    }
+                    val families = repository.getModelFamilies()
+                    
+                    _uiState.update { 
+                        it.copy(
+                            isLoading = false,
+                            models = allModels,
+                            families = families,
+                            error = null
+                        )
+                    }
+                    
+                    _effects.send(ModelListEffect.ShowImportSuccess(importedIds.size))
+                } else {
+                    _uiState.update { it.copy(isLoading = false) }
+                    _effects.send(ModelListEffect.ShowError("No valid GGUF files found"))
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false) }
+                _effects.send(ModelListEffect.ShowError(e.message ?: "Import failed"))
             }
         }
     }

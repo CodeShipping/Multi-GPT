@@ -468,6 +468,16 @@ class ChatViewModel @Inject constructor(
                     return@launch
                 }
                 
+                // For imported models, check if file exists directly
+                val modelsDir = java.io.File(context.filesDir, "models")
+                val modelFile = java.io.File(modelsDir, "$modelId.gguf")
+                
+                if (!modelFile.exists()) {
+                    Log.e("ChatViewModel", "Model file not found: ${modelFile.absolutePath}")
+                    localFlow.emit(ApiState.Error("Model file not found. Please re-import or download the model."))
+                    return@launch
+                }
+                
                 // Try to use LocalInferenceProvider via reflection
                 try {
                     val providerClass = Class.forName("com.matrix.multigpt.localinference.LocalInferenceProvider")
@@ -491,26 +501,43 @@ class ChatViewModel @Inject constructor(
                     @Suppress("UNCHECKED_CAST")
                     val resultFlow = generateMethod.invoke(provider, modelId, chatMessages, 0.7f, 512) as kotlinx.coroutines.flow.Flow<String>
                     
-                    // Collect from the flow
-                    resultFlow.collect { token ->
-                        localFlow.emit(ApiState.Success(token))
+                    // Collect from the flow with timeout to prevent infinite loop
+                    var hasEmitted = false
+                    kotlinx.coroutines.withTimeoutOrNull(120_000L) { // 2 minute timeout
+                        resultFlow.collect { token ->
+                            hasEmitted = true
+                            localFlow.emit(ApiState.Success(token))
+                        }
+                    }
+                    
+                    if (!hasEmitted) {
+                        Log.w("ChatViewModel", "No tokens emitted from local model")
+                        localFlow.emit(ApiState.Error("Model did not generate any response. The model may be incompatible or corrupted."))
                     }
                     localFlow.emit(ApiState.Done)
                     
                 } catch (e: ClassNotFoundException) {
                     localFlow.emit(ApiState.Error("Local inference module not installed. Please install it from Settings."))
+                    localFlow.emit(ApiState.Done)
                 } catch (e: java.lang.reflect.InvocationTargetException) {
                     // Unwrap the actual exception
                     val cause = e.cause
                     Log.e("ChatViewModel", "Local inference error", cause)
                     localFlow.emit(ApiState.Error("${cause?.message ?: e.message}"))
+                    localFlow.emit(ApiState.Done)
+                } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                    Log.e("ChatViewModel", "Local inference timeout")
+                    localFlow.emit(ApiState.Error("Generation timed out. The model may be too large for your device."))
+                    localFlow.emit(ApiState.Done)
                 } catch (e: Exception) {
                     Log.e("ChatViewModel", "Local inference error", e)
                     localFlow.emit(ApiState.Error("Local inference failed: ${e.message}"))
+                    localFlow.emit(ApiState.Done)
                 }
             } catch (e: Exception) {
                 Log.e("ChatViewModel", "Local chat error", e)
                 localFlow.emit(ApiState.Error("Error: ${e.message}"))
+                localFlow.emit(ApiState.Done)
             }
         }
     }

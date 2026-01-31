@@ -1,13 +1,21 @@
 package com.matrix.multigpt.localinference.data.repository
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Log
 import com.matrix.multigpt.localinference.data.mapper.ModelMapper
 import com.matrix.multigpt.localinference.data.model.LocalModel
 import com.matrix.multigpt.localinference.data.model.LocalModelState
 import com.matrix.multigpt.localinference.data.model.ModelFamily
+import com.matrix.multigpt.localinference.data.model.ModelPerformance
+import com.matrix.multigpt.localinference.data.model.ModelStatus
+import com.matrix.multigpt.localinference.data.model.PerformanceRating
+import com.matrix.multigpt.localinference.data.model.UseCase
 import com.matrix.multigpt.localinference.data.network.ModelCatalogService
 import com.matrix.multigpt.localinference.data.source.LocalModelCacheDataSource
 import com.matrix.multigpt.localinference.data.source.ModelDownloadManager
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +23,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -30,6 +41,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class LocalModelRepositoryImpl @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val catalogService: ModelCatalogService,
     private val cacheDataSource: LocalModelCacheDataSource,
     private val downloadManager: ModelDownloadManager
@@ -38,6 +50,7 @@ class LocalModelRepositoryImpl @Inject constructor(
     // Cached data in memory
     private var cachedModels: List<LocalModel> = emptyList()
     private var cachedFamilies: List<ModelFamily> = emptyList()
+    private var importedModels: MutableList<LocalModel> = mutableListOf()
 
     // Scope for background operations
     private val repositoryScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -361,6 +374,186 @@ class LocalModelRepositoryImpl @Inject constructor(
 
     override suspend fun isModelDownloaded(modelId: String): Boolean {
         return downloadManager.isModelDownloaded(modelId)
+    }
+
+    override suspend fun importModels(
+        uris: List<Uri>,
+        onProgress: (current: Int, total: Int, fileName: String) -> Unit
+    ): List<String> = withContext(Dispatchers.IO) {
+        val importedIds = mutableListOf<String>()
+        val modelsDir = getModelsDirectory()
+        
+        uris.forEachIndexed { index, uri ->
+            try {
+                val fileName = getFileNameFromUri(uri) ?: "imported_model_${UUID.randomUUID()}.gguf"
+                
+                // Validate it's a GGUF file
+                if (!fileName.lowercase().endsWith(".gguf")) {
+                    Log.w(TAG, "Skipping non-GGUF file: $fileName")
+                    return@forEachIndexed
+                }
+                
+                onProgress(index + 1, uris.size, fileName)
+                
+                val fileSize = getFileSizeFromUri(uri)
+                val modelId = "imported_${fileName.removeSuffix(".gguf").replace("[^a-zA-Z0-9_-]".toRegex(), "_")}_${System.currentTimeMillis()}"
+                val destFile = File(modelsDir, fileName)
+                
+                // Copy file from URI to models directory
+                context.contentResolver.openInputStream(uri)?.use { input ->
+                    destFile.outputStream().use { output ->
+                        val buffer = ByteArray(8192)
+                        var bytesRead: Int
+                        var totalRead = 0L
+                        
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            totalRead += bytesRead
+                        }
+                    }
+                } ?: throw IllegalStateException("Could not open input stream for URI: $uri")
+                
+                // Create LocalModel entry for the imported model
+                val importedModel = LocalModel(
+                    id = modelId,
+                    name = fileName.removeSuffix(".gguf").replace("_", " ").replace("-", " "),
+                    description = "Imported from device storage",
+                    size = fileSize,
+                    downloadUrl = "", // No download URL for imported models
+                    fileName = fileName,
+                    performance = ModelPerformance(
+                        tokensPerSecond = 15f, // Default estimate
+                        memoryRequired = fileSize * 2, // Rough estimate
+                        cpuIntensive = true,
+                        gpuAccelerated = true,
+                        rating = estimatePerformanceRating(fileSize)
+                    ),
+                    useCases = listOf(UseCase.GENERAL, UseCase.CHAT),
+                    quantization = extractQuantization(fileName),
+                    parameters = extractParameters(fileName),
+                    contextLength = 4096, // Default
+                    familyId = "imported",
+                    isRecommended = false,
+                    isImported = true
+                )
+                
+                // Add to imported models list
+                importedModels.add(importedModel)
+                
+                // Update download manager state to mark as downloaded
+                downloadManager.markAsDownloaded(modelId, destFile.absolutePath, fileSize)
+                
+                importedIds.add(modelId)
+                Log.d(TAG, "Successfully imported model: $fileName as $modelId")
+                
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to import model from URI: $uri", e)
+            }
+        }
+        
+        // Save imported models list
+        saveImportedModels()
+        
+        importedIds
+    }
+
+    override suspend fun getImportedModels(): List<LocalModel> {
+        if (importedModels.isEmpty()) {
+            loadImportedModels()
+        }
+        return importedModels.toList()
+    }
+
+    private fun getModelsDirectory(): File {
+        val dir = File(context.filesDir, "models")
+        if (!dir.exists()) {
+            dir.mkdirs()
+        }
+        return dir
+    }
+
+    private fun getFileNameFromUri(uri: Uri): String? {
+        return context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+            if (nameIndex >= 0 && cursor.moveToFirst()) {
+                cursor.getString(nameIndex)
+            } else {
+                null
+            }
+        }
+    }
+
+    private fun getFileSizeFromUri(uri: Uri): Long {
+        return context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val sizeIndex = cursor.getColumnIndex(OpenableColumns.SIZE)
+            if (sizeIndex >= 0 && cursor.moveToFirst()) {
+                cursor.getLong(sizeIndex)
+            } else {
+                0L
+            }
+        } ?: 0L
+    }
+
+    private fun estimatePerformanceRating(fileSize: Long): PerformanceRating {
+        return when {
+            fileSize < 1_000_000_000L -> PerformanceRating.FAST // < 1GB
+            fileSize < 2_500_000_000L -> PerformanceRating.BALANCED // 1-2.5GB
+            fileSize < 5_000_000_000L -> PerformanceRating.QUALITY // 2.5-5GB
+            else -> PerformanceRating.DEMANDING // > 5GB
+        }
+    }
+
+    private fun extractQuantization(fileName: String): String {
+        val quantPatterns = listOf(
+            "q2_k", "q3_k_s", "q3_k_m", "q3_k_l",
+            "q4_0", "q4_1", "q4_k_s", "q4_k_m",
+            "q5_0", "q5_1", "q5_k_s", "q5_k_m",
+            "q6_k", "q8_0", "f16", "f32"
+        )
+        val lowerName = fileName.lowercase()
+        return quantPatterns.find { lowerName.contains(it) }?.uppercase() ?: "Unknown"
+    }
+
+    private fun extractParameters(fileName: String): String {
+        val paramPatterns = listOf(
+            Regex("(\\d+\\.?\\d*)b", RegexOption.IGNORE_CASE),
+            Regex("(\\d+)m", RegexOption.IGNORE_CASE)
+        )
+        for (pattern in paramPatterns) {
+            val match = pattern.find(fileName)
+            if (match != null) {
+                return match.groupValues[0].uppercase()
+            }
+        }
+        return "Unknown"
+    }
+
+    private suspend fun saveImportedModels() {
+        try {
+            cacheDataSource.saveImportedModels(importedModels)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save imported models", e)
+        }
+    }
+
+    private suspend fun loadImportedModels() {
+        try {
+            val loaded = cacheDataSource.getImportedModels()
+            importedModels = loaded.toMutableList()
+            
+            // Ensure "imported" family exists
+            if (importedModels.isNotEmpty() && cachedFamilies.none { it.id == "imported" }) {
+                cachedFamilies = cachedFamilies + ModelFamily(
+                    id = "imported",
+                    name = "Imported Models",
+                    description = "Models imported from your device storage.",
+                    developer = "User",
+                    license = "Various"
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to load imported models", e)
+        }
     }
     
     companion object {

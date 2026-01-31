@@ -1,6 +1,12 @@
 package com.matrix.multigpt.presentation.ui.localai
 
+import android.app.ActivityManager
+import android.content.Context
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -9,6 +15,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
@@ -16,6 +26,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -45,8 +56,18 @@ fun LocalAIModelsScreen(
     val downloadedModels by viewModel.downloadedModels.collectAsStateWithLifecycle()
     val selectedModelId by viewModel.selectedModelId.collectAsStateWithLifecycle()
     val localEnabled by viewModel.localEnabled.collectAsStateWithLifecycle()
+    val importProgress by viewModel.importProgress.collectAsStateWithLifecycle()
     
     var showDeleteDialog by remember { mutableStateOf<ModelInfo?>(null) }
+
+    // File picker launcher for importing GGUF files
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments()
+    ) { uris: List<Uri> ->
+        if (uris.isNotEmpty()) {
+            viewModel.importModels(uris)
+        }
+    }
     
     Scaffold(
         topBar = {
@@ -164,17 +185,76 @@ fun LocalAIModelsScreen(
                                 }
                             }
                         }
+
+                        // Import Model Card
+                        item {
+                            ImportModelCard(
+                                onImportClick = {
+                                    filePickerLauncher.launch(arrayOf("*/*"))
+                                }
+                            )
+                        }
+
+                        // Device Info Card
+                        item {
+                            DeviceInfoCard()
+                        }
+
+                        // Separate imported models from downloadable models
+                        val importedModels = models.filter { it.isImported }
+                        val downloadableModels = models.filter { !it.isImported }
+
+                        // Imported Models Section (only show if there are imported models)
+                        if (importedModels.isNotEmpty()) {
+                            item {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Imported Models",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            
+                            items(importedModels, key = { it.id }) { model ->
+                                val isDownloaded = downloadedModels.contains(model.id)
+                                val isDownloading = downloadingModels.contains(model.id)
+                                val isSelected = selectedModelId == model.id
+                                
+                                ModelCard(
+                                    model = model,
+                                    isDownloaded = isDownloaded,
+                                    isDownloading = isDownloading,
+                                    isSelected = isSelected,
+                                    downloadProgress = downloadProgressMap[model.id] ?: 0f,
+                                    downloadedBytes = downloadedBytesMap[model.id] ?: 0L,
+                                    totalBytes = totalBytesMap[model.id] ?: 0L,
+                                    onDownload = { viewModel.startDownload(model) },
+                                    onDelete = { showDeleteDialog = model },
+                                    onUseModel = {
+                                        viewModel.selectModel(model)
+                                        Toast.makeText(
+                                            context, 
+                                            "Selected ${model.name}. Create a new chat to use it.", 
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        onNavigateBack()
+                                    },
+                                    onClick = { }
+                                )
+                            }
+                        }
                         
+                        // Downloadable Models Section
                         item {
                             Spacer(modifier = Modifier.height(8.dp))
                             Text(
-                                text = "Available Models",
+                                text = "Downloadable Models",
                                 style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.primary
                             )
                         }
                         
-                        items(models) { model ->
+                        items(downloadableModels, key = { it.id }) { model ->
                             val isDownloaded = downloadedModels.contains(model.id)
                             val isDownloading = downloadingModels.contains(model.id)
                             val isSelected = selectedModelId == model.id
@@ -206,6 +286,31 @@ fun LocalAIModelsScreen(
             }
         }
         
+        // Import Progress Dialog
+        importProgress?.let { progress ->
+            AlertDialog(
+                onDismissRequest = { /* Non-dismissible */ },
+                title = { Text("Importing Models") },
+                text = {
+                    Column {
+                        Text("Importing ${progress.current} of ${progress.total}...")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = progress.fileName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        LinearProgressIndicator(
+                            progress = { progress.current.toFloat() / progress.total },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                },
+                confirmButton = { }
+            )
+        }
+
         // Delete confirmation dialog
         if (showDeleteDialog != null) {
             val modelToDelete = showDeleteDialog!!
@@ -264,6 +369,10 @@ private fun ModelCard(
     onUseModel: () -> Unit,
     onClick: () -> Unit
 ) {
+    // Imported models should show "Imported" tag, not "Downloaded"
+    val isImported = model.isImported
+    val showAsReady = isDownloaded || isImported
+    
     Card(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth()
@@ -342,11 +451,12 @@ private fun ModelCard(
                 )
                 
                 when {
-                    isDownloaded -> {
+                    showAsReady -> {
                         Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Show "Imported" for imported models, "Downloaded" for downloaded
                             AssistChip(
                                 onClick = {},
-                                label = { Text("Downloaded") },
+                                label = { Text(if (isImported) "Imported" else "Downloaded") },
                                 leadingIcon = {
                                     Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                                 }
@@ -391,11 +501,251 @@ private fun ModelCard(
     }
 }
 
+/**
+ * Card for importing GGUF models from device storage.
+ */
+@Composable
+private fun ImportModelCard(
+    onImportClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Import GGUF Model",
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Import a .gguf model file from your device storage",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            FilledTonalButton(
+                onClick = onImportClick
+            ) {
+                Icon(
+                    Icons.Filled.Download,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Import")
+            }
+        }
+    }
+}
+
 private fun formatSize(bytes: Long): String {
     return when {
         bytes < 1024 -> "$bytes B"
         bytes < 1024 * 1024 -> "${bytes / 1024} KB"
         bytes < 1024 * 1024 * 1024 -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
         else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+    }
+}
+
+/**
+ * Card showing device RAM info and model size recommendations.
+ */
+@Composable
+private fun DeviceInfoCard() {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+    
+    // Get device RAM
+    val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+    val memInfo = ActivityManager.MemoryInfo()
+    activityManager.getMemoryInfo(memInfo)
+    val totalRamGB = memInfo.totalMem / (1024.0 * 1024.0 * 1024.0)
+    val availableRamGB = memInfo.availMem / (1024.0 * 1024.0 * 1024.0)
+    
+    // Determine recommendations based on RAM
+    val (maxModelSize, recommendation, recommendedModels) = when {
+        totalRamGB >= 16 -> Triple(
+            "~8GB",
+            "Your device can run most models including 7B-8B parameter models",
+            listOf("Llama 3.2 3B", "Mistral 7B (Q4)", "Qwen2.5 7B (Q4)")
+        )
+        totalRamGB >= 12 -> Triple(
+            "~5-6GB", 
+            "Your device can run 7B models with Q4 quantization",
+            listOf("Llama 3.2 3B", "Phi 3.5 Mini", "Qwen2.5 7B (Q4)")
+        )
+        totalRamGB >= 8 -> Triple(
+            "~3-4GB",
+            "Your device works well with 1B-3B parameter models",
+            listOf("Llama 3.2 1B", "Llama 3.2 3B (Q4)", "Qwen2.5 1.5B")
+        )
+        totalRamGB >= 6 -> Triple(
+            "~2-2.5GB",
+            "Your device is best suited for smaller models",
+            listOf("Llama 3.2 1B (Q4)", "Qwen2.5 0.5B", "Qwen2.5 1.5B (Q4)")
+        )
+        else -> Triple(
+            "~1-1.5GB",
+            "Your device works best with compact models",
+            listOf("Qwen2.5 0.5B", "Llama 3.2 1B (Q4)")
+        )
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Filled.Memory,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "Device: ${String.format("%.1f", totalRamGB)}GB RAM",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Text(
+                            text = "Available: ${String.format("%.1f", availableRamGB)}GB • Max model: $maxModelSize",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
+                        )
+                    }
+                }
+                IconButton(onClick = { expanded = !expanded }) {
+                    Icon(
+                        if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = if (expanded) "Collapse" else "Expand",
+                        tint = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                }
+            }
+            
+            AnimatedVisibility(visible = expanded) {
+                Column(modifier = Modifier.padding(top = 12.dp)) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Text(
+                        text = recommendation,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Text(
+                        text = "Recommended for your device:",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    recommendedModels.forEach { model ->
+                        Text(
+                            text = "• $model",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.9f)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.2f)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Model Size Guide
+                    Text(
+                        text = "Model Size Guide",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSecondaryContainer
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    ModelSizeGuideRow("4GB RAM", "~1-1.5GB models", "0.5B-1B (Q4)")
+                    ModelSizeGuideRow("6GB RAM", "~2-2.5GB models", "1B-3B (Q4)")
+                    ModelSizeGuideRow("8GB RAM", "~3-4GB models", "3B (Q8), 7B (Q4)")
+                    ModelSizeGuideRow("12GB+ RAM", "~5-8GB models", "7B-8B (Q4/Q8)")
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Row(
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            Icons.Filled.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Q4 = smaller/faster, Q8 = larger/better quality. Model file size ≈ RAM needed.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ModelSizeGuideRow(ramSize: String, modelSize: String, recommended: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = ramSize,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = modelSize,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = recommended,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f),
+            modifier = Modifier.weight(1.2f)
+        )
     }
 }

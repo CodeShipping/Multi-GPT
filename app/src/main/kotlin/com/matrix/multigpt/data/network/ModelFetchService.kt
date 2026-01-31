@@ -290,6 +290,9 @@ class ModelFetchServiceImpl @Inject constructor(
             emptySet()
         }
         
+        // Load imported models from SharedPreferences
+        val importedModels = loadImportedModels(modelsDir)
+        
         // Define available models with their file names
         data class LocalModelDef(
             val id: String,
@@ -338,7 +341,7 @@ class ModelFetchServiceImpl @Inject constructor(
         )
         
         // Map to ModelInfo with isAvailable based on download status
-        val models = availableModels.map { model ->
+        val catalogModels = availableModels.map { model ->
             val isDownloaded = downloadedFiles.contains(model.fileName) || 
                                downloadedFiles.contains(model.id)
             ModelInfo(
@@ -349,10 +352,71 @@ class ModelFetchServiceImpl @Inject constructor(
             )
         }
         
-        // Sort: downloaded first, then by name
-        val sortedModels = models.sortedByDescending { it.isAvailable }
+        // Combine: imported models first (they're always available), then catalog models
+        val allModels = importedModels + catalogModels.filter { catalog ->
+            importedModels.none { it.id == catalog.id }
+        }
+        
+        // Sort: available (downloaded/imported) first, then by name
+        val sortedModels = allModels.sortedByDescending { it.isAvailable }
         
         return ModelFetchResult.Success(sortedModels)
+    }
+    
+    /**
+     * Load imported models from SharedPreferences.
+     */
+    private fun loadImportedModels(modelsDir: File): List<ModelInfo> {
+        val prefs = context.getSharedPreferences("local_ai_imported_models", Context.MODE_PRIVATE)
+        val json = prefs.getString("imported_models", "[]") ?: "[]"
+        
+        if (json == "[]") return emptyList()
+        
+        val models = mutableListOf<ModelInfo>()
+        
+        try {
+            // Simple JSON parsing
+            val entriesStr = json.removePrefix("[").removeSuffix("]")
+            if (entriesStr.isBlank()) return emptyList()
+            
+            // Split by },{ pattern to get individual objects
+            val entries = entriesStr.split(Regex("\\},\\s*\\{"))
+            
+            entries.forEachIndexed { index, entry ->
+                try {
+                    // Clean up entry
+                    var cleanEntry = entry
+                    if (index == 0) cleanEntry = cleanEntry.removePrefix("{")
+                    if (index == entries.size - 1) cleanEntry = cleanEntry.removeSuffix("}")
+                    if (!cleanEntry.startsWith("{")) cleanEntry = "{$cleanEntry"
+                    if (!cleanEntry.endsWith("}")) cleanEntry = "$cleanEntry}"
+                    
+                    // Parse fields
+                    val id = Regex(""""id"\s*:\s*"([^"]+)"""").find(cleanEntry)?.groupValues?.get(1) ?: return@forEachIndexed
+                    val name = Regex(""""name"\s*:\s*"([^"]+)"""").find(cleanEntry)?.groupValues?.get(1) ?: "Unknown"
+                    val description = Regex(""""description"\s*:\s*"([^"]+)"""").find(cleanEntry)?.groupValues?.get(1) ?: "Imported model"
+                    
+                    // Check if model file still exists
+                    val modelFile = File(modelsDir, "$id.gguf")
+                    if (modelFile.exists()) {
+                        models.add(
+                            ModelInfo(
+                                id = id,
+                                name = name,
+                                description = "[Imported] $description",
+                                isAvailable = true
+                            )
+                        )
+                    }
+                } catch (e: Exception) {
+                    // Skip malformed entry
+                }
+            }
+        } catch (e: Exception) {
+            // Return empty list on parse error
+        }
+        
+        return models
     }
 
     private fun formatSize(bytes: Long): String {

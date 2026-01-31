@@ -94,6 +94,16 @@
     <string name="feature_downloading">Installing feature…</string>
     <string name="feature_download_failed">Failed to install feature</string>
 
+    <!-- Import -->
+    <string name="import_gguf">Import GGUF</string>
+    <string name="import_models_title">Importing Models</string>
+    <string name="import_progress">Importing %1$d of %2$d…</string>
+    <string name="import_success_single">1 model imported successfully</string>
+    <string name="import_success_multiple">%d models imported successfully</string>
+    <string name="import_failed">Import failed: %s</string>
+    <string name="import_no_valid_files">No valid GGUF files found</string>
+    <string name="filter_imported">Imported</string>
+
     <!-- Accessibility -->
     <string name="cd_model_icon">Model icon</string>
     <string name="cd_download_progress">Download progress: %d percent</string>
@@ -101,4 +111,5 @@
     <string name="cd_search_button">Search models</string>
     <string name="cd_back_button">Go back</string>
     <string name="cd_refresh_button">Refresh model list</string>
+    <string name="cd_import_button">Import GGUF model from device storage</string>
 </resources>

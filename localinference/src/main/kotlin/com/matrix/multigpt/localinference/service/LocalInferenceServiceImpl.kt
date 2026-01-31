@@ -86,50 +86,86 @@ class LocalInferenceServiceImpl @Inject constructor(
         val model = llamaModel
             ?: throw IllegalStateException("No model loaded. Call loadModel() first.")
         
+        android.util.Log.d("LocalInference", "generateChatCompletion started")
+        
         // Cancel any previous generation and wait for it to finish
         if (model.isGenerating) {
+            android.util.Log.d("LocalInference", "Cancelling previous generation...")
             model.cancelGeneration()
             // Wait for generation to actually stop (up to 3 seconds)
             repeat(30) {
                 if (!model.isGenerating) return@repeat
                 kotlinx.coroutines.delay(100)
             }
+            android.util.Log.d("LocalInference", "Previous generation cancelled")
         }
         
         isGenerating.set(true)
         shouldCancel.set(false)
         
         try {
-            // Format messages into a prompt
+            // Format messages into a prompt based on detected model type
             val prompt = formatChatPrompt(messages)
+            android.util.Log.d("LocalInference", "Prompt formatted, length: ${prompt.length}")
             
-            // Use streaming generation for real-time token output
-            // Retry with delay if generation is still in progress
-            var retries = 3
-            var lastException: Exception? = null
+            // Use streaming generation with timeout monitoring
+            var tokenCount = 0
+            var lastTokenTime = System.currentTimeMillis()
+            val prefillTimeout = 60_000L // 60 seconds for prefill (first token)
+            val tokenTimeout = 30_000L // 30 seconds between tokens
             
-            while (retries > 0) {
-                try {
+            // Emit a "thinking" indicator after 5 seconds of waiting
+            val thinkingJob = kotlinx.coroutines.GlobalScope.launch {
+                kotlinx.coroutines.delay(5000)
+                if (tokenCount == 0 && !shouldCancel.get()) {
+                    android.util.Log.d("LocalInference", "Still processing (prefill phase)...")
+                }
+            }
+            
+            try {
+                android.util.Log.d("LocalInference", "Starting generateStream")
+                
+                // Start generation with monitoring
+                kotlinx.coroutines.withTimeoutOrNull(prefillTimeout) {
                     model.generateStream(prompt).collect { token ->
+                        thinkingJob.cancel() // Cancel thinking indicator once we get a token
+                        
                         if (!shouldCancel.get()) {
+                            tokenCount++
+                            lastTokenTime = System.currentTimeMillis()
+                            
+                            if (tokenCount <= 3 || tokenCount % 50 == 0) {
+                                android.util.Log.d("LocalInference", "Token #$tokenCount: '$token'")
+                            }
                             emit(token)
                         }
                     }
-                    break // Success - exit retry loop
-                } catch (e: Exception) {
-                    lastException = e
-                    if (e.message?.contains("already in progress") == true && retries > 1) {
-                        // Wait and retry
-                        kotlinx.coroutines.delay(500)
-                        retries--
-                    } else {
-                        throw e
-                    }
                 }
+                
+                thinkingJob.cancel()
+                android.util.Log.d("LocalInference", "Stream completed. Total tokens: $tokenCount")
+                
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                thinkingJob.cancel()
+                android.util.Log.e("LocalInference", "Generation timed out waiting for first token")
+                if (tokenCount == 0) {
+                    throw IllegalStateException("Model timed out during prefill. The model may be incompatible or too large.")
+                }
+            } catch (e: Exception) {
+                thinkingJob.cancel()
+                android.util.Log.e("LocalInference", "Generate error: ${e.message}", e)
+                throw e
+            }
+            
+            // If no tokens were emitted, provide guidance
+            if (tokenCount == 0) {
+                android.util.Log.w("LocalInference", "No tokens generated!")
+                emit("(No response generated - this model may require a different prompt format. Try Llama 3.x compatible models.)")
             }
             
         } finally {
             isGenerating.set(false)
+            android.util.Log.d("LocalInference", "generateChatCompletion finished")
         }
     }.flowOn(Dispatchers.IO)
     

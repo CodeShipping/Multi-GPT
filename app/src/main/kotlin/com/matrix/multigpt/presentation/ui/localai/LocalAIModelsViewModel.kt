@@ -1,6 +1,7 @@
 package com.matrix.multigpt.presentation.ui.localai
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.matrix.multigpt.data.source.LocalModelDownloadState
@@ -10,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.io.File
+import java.util.UUID
 import javax.inject.Inject
 
 /**
@@ -22,7 +24,17 @@ data class ModelInfo(
     val size: Long,
     val isRecommended: Boolean,
     val downloadUrl: String,
-    val performance: String
+    val performance: String,
+    val isImported: Boolean = false
+)
+
+/**
+ * Progress state for model import.
+ */
+data class ImportProgress(
+    val current: Int,
+    val total: Int,
+    val fileName: String
 )
 
 /**
@@ -59,6 +71,9 @@ class LocalAIModelsViewModel @Inject constructor(
     private val _localEnabled = MutableStateFlow(false)
     val localEnabled: StateFlow<Boolean> = _localEnabled.asStateFlow()
 
+    private val _importProgress = MutableStateFlow<ImportProgress?>(null)
+    val importProgress: StateFlow<ImportProgress?> = _importProgress.asStateFlow()
+
     init {
         loadModels()
     }
@@ -68,12 +83,25 @@ class LocalAIModelsViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 val loadedModels = loadModelsFromModule()
-                _models.value = loadedModels
                 
-                // Check which models are already downloaded
-                _downloadedModels.value = loadedModels.filter { 
-                    isModelDownloaded(it.id) 
-                }.map { it.id }.toSet()
+                // Load imported models from preferences
+                val importedModels = loadImportedModels()
+                
+                // Combine models, avoiding duplicates
+                val allModels = loadedModels + importedModels.filter { imported -> 
+                    loadedModels.none { it.id == imported.id } 
+                }
+                
+                _models.value = allModels
+                
+                // Check which models are already downloaded (including imported ones)
+                val downloadedSet = mutableSetOf<String>()
+                allModels.forEach { model ->
+                    if (model.isImported || isModelDownloaded(model.id)) {
+                        downloadedSet.add(model.id)
+                    }
+                }
+                _downloadedModels.value = downloadedSet
                 
                 // Check which model is currently selected
                 val prefs = context.getSharedPreferences("local_ai_prefs", Context.MODE_PRIVATE)
@@ -82,7 +110,7 @@ class LocalAIModelsViewModel @Inject constructor(
                 _error.value = null
             } catch (e: Exception) {
                 _error.value = "Using offline models: ${e.message}"
-                _models.value = getDefaultModelInfos()
+                _models.value = getDefaultModelInfos() + loadImportedModels()
             }
             _isLoading.value = false
         }
@@ -195,6 +223,222 @@ class LocalAIModelsViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Import GGUF models from external storage.
+     */
+    fun importModels(uris: List<Uri>) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ggufUris = uris.filter { uri ->
+                val path = uri.path ?: uri.toString()
+                path.endsWith(".gguf", ignoreCase = true) ||
+                context.contentResolver.getType(uri)?.contains("octet-stream") == true
+            }
+            
+            if (ggufUris.isEmpty()) {
+                _error.value = "No valid GGUF files found"
+                return@launch
+            }
+
+            val importedModels = mutableListOf<ModelInfo>()
+            val modelsDir = File(context.filesDir, "models").also { it.mkdirs() }
+
+            ggufUris.forEachIndexed { index, uri ->
+                try {
+                    // Get file name
+                    val fileName = getFileNameFromUri(uri)
+                    _importProgress.value = ImportProgress(index + 1, ggufUris.size, fileName)
+
+                    // Generate unique ID
+                    val modelId = "imported-${UUID.randomUUID().toString().take(8)}"
+                    val destFile = File(modelsDir, "$modelId.gguf")
+
+                    // Copy file
+                    context.contentResolver.openInputStream(uri)?.use { input ->
+                        destFile.outputStream().use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+
+                    // Extract model info from filename
+                    val fileSize = destFile.length()
+                    val (name, description, quantization, params) = extractModelInfoFromFileName(fileName)
+
+                    // Create model info
+                    val modelInfo = ModelInfo(
+                        id = modelId,
+                        name = name,
+                        description = description,
+                        size = fileSize,
+                        isRecommended = false,
+                        downloadUrl = "", // No URL for imported models
+                        performance = estimatePerformance(fileSize),
+                        isImported = true
+                    )
+
+                    importedModels.add(modelInfo)
+                    _downloadedModels.value = _downloadedModels.value + modelId
+
+                } catch (e: Exception) {
+                    // Continue with other files
+                }
+            }
+
+            _importProgress.value = null
+
+            if (importedModels.isNotEmpty()) {
+                // Add imported models to the list
+                _models.value = _models.value + importedModels
+                
+                // Save imported models to preferences
+                saveImportedModels(importedModels)
+            }
+        }
+    }
+
+    private fun getFileNameFromUri(uri: Uri): String {
+        var fileName = "unknown.gguf"
+        context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+            val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+            if (cursor.moveToFirst() && nameIndex >= 0) {
+                fileName = cursor.getString(nameIndex) ?: fileName
+            }
+        }
+        return fileName
+    }
+
+    private fun extractModelInfoFromFileName(fileName: String): ModelInfoComponents {
+        val baseName = fileName.removeSuffix(".gguf").removeSuffix(".GGUF")
+        
+        // Try to extract quantization (Q4_K_M, Q8_0, etc.)
+        val quantRegex = Regex("[-_](Q\\d+(?:_[A-Z](?:_[A-Z])?)?)", RegexOption.IGNORE_CASE)
+        val quantMatch = quantRegex.find(baseName)
+        val quantization = quantMatch?.groupValues?.get(1)?.uppercase() ?: "Unknown"
+        
+        // Try to extract parameter count (0.5B, 1B, 3B, 7B, etc.)
+        val paramRegex = Regex("[-_]?(\\d+(?:\\.\\d+)?)[Bb][-_]?")
+        val paramMatch = paramRegex.find(baseName)
+        val params = paramMatch?.groupValues?.get(1)?.let { "${it}B" } ?: "Unknown"
+        
+        // Clean up name
+        var name = baseName
+            .replace(quantRegex, "")
+            .replace(paramRegex, " ")
+            .replace(Regex("[-_]+"), " ")
+            .trim()
+            .split(" ")
+            .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
+        
+        if (name.isBlank()) name = "Imported Model"
+        if (quantization != "Unknown") name = "$name ($quantization)"
+        
+        val description = buildString {
+            append("Imported from device. ")
+            if (params != "Unknown") append("$params parameters. ")
+            if (quantization != "Unknown") append("Quantization: $quantization")
+        }.trim()
+        
+        return ModelInfoComponents(name, description, quantization, params)
+    }
+
+    private fun estimatePerformance(fileSize: Long): String {
+        val sizeGB = fileSize / (1024.0 * 1024.0 * 1024.0)
+        return when {
+            sizeGB < 0.5 -> "Very Fast • ~40+ tokens/sec"
+            sizeGB < 1.0 -> "Fast • ~25 tokens/sec"
+            sizeGB < 2.0 -> "Balanced • ~15 tokens/sec"
+            sizeGB < 4.0 -> "Quality • ~10 tokens/sec"
+            else -> "Demanding • ~5 tokens/sec"
+        }
+    }
+
+    private fun saveImportedModels(models: List<ModelInfo>) {
+        val prefs = context.getSharedPreferences("local_ai_imported_models", Context.MODE_PRIVATE)
+        val existingJson = prefs.getString("imported_models", "[]") ?: "[]"
+        
+        // Simple JSON serialization
+        val newEntries = models.joinToString(",") { model ->
+            """{"id":"${model.id}","name":"${model.name}","description":"${model.description}","size":${model.size},"performance":"${model.performance}"}"""
+        }
+        
+        val updatedJson = if (existingJson == "[]") {
+            "[$newEntries]"
+        } else {
+            existingJson.dropLast(1) + ",$newEntries]"
+        }
+        
+        prefs.edit().putString("imported_models", updatedJson).apply()
+    }
+
+    /**
+     * Load previously imported models from SharedPreferences.
+     */
+    private fun loadImportedModels(): List<ModelInfo> {
+        val prefs = context.getSharedPreferences("local_ai_imported_models", Context.MODE_PRIVATE)
+        val json = prefs.getString("imported_models", "[]") ?: "[]"
+        
+        if (json == "[]") return emptyList()
+        
+        val models = mutableListOf<ModelInfo>()
+        val modelsDir = File(context.filesDir, "models")
+        
+        try {
+            // Simple JSON parsing
+            val entriesStr = json.removePrefix("[").removeSuffix("]")
+            if (entriesStr.isBlank()) return emptyList()
+            
+            // Split by },{ pattern to get individual objects
+            val entries = entriesStr.split(Regex("\\},\\s*\\{"))
+            
+            entries.forEachIndexed { index, entry ->
+                try {
+                    // Clean up entry
+                    var cleanEntry = entry
+                    if (index == 0) cleanEntry = cleanEntry.removePrefix("{")
+                    if (index == entries.size - 1) cleanEntry = cleanEntry.removeSuffix("}")
+                    if (!cleanEntry.startsWith("{")) cleanEntry = "{$cleanEntry"
+                    if (!cleanEntry.endsWith("}")) cleanEntry = "$cleanEntry}"
+                    
+                    // Parse fields
+                    val id = Regex(""""id"\s*:\s*"([^"]+)"""").find(cleanEntry)?.groupValues?.get(1) ?: return@forEachIndexed
+                    val name = Regex(""""name"\s*:\s*"([^"]+)"""").find(cleanEntry)?.groupValues?.get(1) ?: "Unknown"
+                    val description = Regex(""""description"\s*:\s*"([^"]+)"""").find(cleanEntry)?.groupValues?.get(1) ?: ""
+                    val size = Regex(""""size"\s*:\s*(\d+)""").find(cleanEntry)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
+                    val performance = Regex(""""performance"\s*:\s*"([^"]+)"""").find(cleanEntry)?.groupValues?.get(1) ?: "Unknown"
+                    
+                    // Check if model file still exists
+                    val modelFile = File(modelsDir, "$id.gguf")
+                    if (modelFile.exists()) {
+                        models.add(
+                            ModelInfo(
+                                id = id,
+                                name = name,
+                                description = description,
+                                size = size,
+                                isRecommended = false,
+                                downloadUrl = "",
+                                performance = performance,
+                                isImported = true
+                            )
+                        )
+                    }
+                } catch (e: Exception) {
+                    // Skip malformed entry
+                }
+            }
+        } catch (e: Exception) {
+            // Return empty list on parse error
+        }
+        
+        return models
+    }
+
+    private data class ModelInfoComponents(
+        val name: String,
+        val description: String,
+        val quantization: String,
+        val params: String
+    )
 
     // --- Private helpers using reflection ---
 

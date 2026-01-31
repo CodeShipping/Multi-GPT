@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.matrix.multigpt.localinference.data.dto.ModelCatalogResponse
+import com.matrix.multigpt.localinference.data.model.LocalModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -46,6 +47,7 @@ class LocalModelCacheDataSource @Inject constructor(
         val CACHED_VERSION = intPreferencesKey("cached_version")
         val LAST_SYNC_TIME = longPreferencesKey("last_sync_time")
         val LAST_VERSION_CHECK_TIME = longPreferencesKey("last_version_check_time")
+        val IMPORTED_MODELS_JSON = stringPreferencesKey("imported_models_json")
     }
 
     companion object {
@@ -150,5 +152,29 @@ class LocalModelCacheDataSource @Inject constructor(
         context.modelCatalogDataStore.edit { preferences ->
             preferences.clear()
         }
+    }
+
+    /**
+     * Save imported models list.
+     */
+    suspend fun saveImportedModels(models: List<LocalModel>) {
+        context.modelCatalogDataStore.edit { preferences ->
+            preferences[Keys.IMPORTED_MODELS_JSON] = json.encodeToString(models)
+        }
+    }
+
+    /**
+     * Get imported models list.
+     */
+    suspend fun getImportedModels(): List<LocalModel> {
+        return context.modelCatalogDataStore.data.map { preferences ->
+            preferences[Keys.IMPORTED_MODELS_JSON]?.let { jsonString ->
+                try {
+                    json.decodeFromString<List<LocalModel>>(jsonString)
+                } catch (e: Exception) {
+                    emptyList()
+                }
+            } ?: emptyList()
+        }.first()
     }
 }

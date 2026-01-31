@@ -69,6 +69,7 @@ class LocalInferenceProvider private constructor(context: Context) {
      */
     val modelRepository: LocalModelRepository by lazy {
         LocalModelRepositoryImpl(
+            context = appContext,
             catalogService = modelCatalogService,
             downloadManager = downloadManager,
             cacheDataSource = localModelCache
@@ -183,21 +184,39 @@ class LocalInferenceProvider private constructor(context: Context) {
         temperature: Float = 0.7f,
         maxTokens: Int = 512
     ): Flow<String> = flow {
+        android.util.Log.d("LocalProvider", "generateChatResponse called for model: $modelId")
+        
         // Get model path
         val modelPath = getModelPath(modelId)
             ?: throw IllegalStateException("Model $modelId not found. Please download it first.")
         
+        android.util.Log.d("LocalProvider", "Model path: $modelPath")
+        
         // Load model if not already loaded or if different model
         val loadedModelId = inferenceService.getLoadedModelId()
+        android.util.Log.d("LocalProvider", "Currently loaded model: $loadedModelId")
+        
         if (loadedModelId != modelId) {
+            android.util.Log.d("LocalProvider", "Loading new model...")
             val result = inferenceService.loadModel(modelPath)
             if (result.isFailure) {
-                throw result.exceptionOrNull() ?: Exception("Failed to load model")
+                val error = result.exceptionOrNull() ?: Exception("Failed to load model")
+                android.util.Log.e("LocalProvider", "Model load failed", error)
+                throw error
             }
+            android.util.Log.d("LocalProvider", "Model loaded successfully")
+        }
+        
+        // Limit messages to last few to reduce prompt size
+        val limitedMessages = if (messages.size > 6) {
+            android.util.Log.d("LocalProvider", "Truncating messages from ${messages.size} to 6")
+            messages.takeLast(6)
+        } else {
+            messages
         }
         
         // Convert messages to ChatMessage format
-        val chatMessages = messages.map { (role, content) ->
+        val chatMessages = limitedMessages.map { (role, content) ->
             val chatRole = when (role.lowercase()) {
                 "user" -> ChatRole.USER
                 "assistant" -> ChatRole.ASSISTANT
@@ -207,10 +226,59 @@ class LocalInferenceProvider private constructor(context: Context) {
             ChatMessage(chatRole, content)
         }
         
-        // Generate response
-        inferenceService.generateChatCompletion(chatMessages, temperature, maxTokens).collect { token ->
-            emit(token)
+        android.util.Log.d("LocalProvider", "Calling generateChatCompletion with ${chatMessages.size} messages")
+        
+        // Try synchronous generation first (more reliable), then fall back to streaming
+        var hasEmittedToken = false
+        
+        // First, try synchronous generation (more reliable on some models)
+        android.util.Log.d("LocalProvider", "Trying synchronous generation first...")
+        try {
+            val syncResult = kotlinx.coroutines.withTimeoutOrNull(90_000L) {
+                inferenceService.generateChatCompletionSync(chatMessages, temperature, maxTokens)
+            }
+            
+            if (syncResult?.isSuccess == true) {
+                val response = syncResult.getOrNull()
+                if (!response.isNullOrBlank()) {
+                    android.util.Log.d("LocalProvider", "Sync generation succeeded: ${response.take(50)}...")
+                    // Emit character by character to simulate streaming
+                    response.chunked(1).forEach { char ->
+                        emit(char)
+                        kotlinx.coroutines.delay(1) // Small delay for UI responsiveness
+                    }
+                    hasEmittedToken = true
+                }
+            } else if (syncResult?.isFailure == true) {
+                android.util.Log.e("LocalProvider", "Sync generation failed", syncResult.exceptionOrNull())
+            } else {
+                android.util.Log.w("LocalProvider", "Sync generation timed out")
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("LocalProvider", "Sync generation exception", e)
         }
+        
+        // If sync didn't work, try streaming
+        if (!hasEmittedToken) {
+            android.util.Log.d("LocalProvider", "Trying streaming generation...")
+            try {
+                kotlinx.coroutines.withTimeoutOrNull(60_000L) { // 60 second timeout for streaming
+                    inferenceService.generateChatCompletion(chatMessages, temperature, maxTokens).collect { token ->
+                        hasEmittedToken = true
+                        emit(token)
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("LocalProvider", "Streaming generation error", e)
+            }
+        }
+        
+        if (!hasEmittedToken) {
+            android.util.Log.e("LocalProvider", "No tokens generated by any method")
+            throw IllegalStateException("Model failed to generate a response. Please try a different model or shorter input.")
+        }
+        
+        android.util.Log.d("LocalProvider", "Generation complete")
     }
     
     /**
