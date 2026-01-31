@@ -240,4 +240,7 @@
     <string name="local_ai_model_not_found">Selected model not found. Please select another model.</string>
     <string name="local_ai_loading_model">Loading model…</string>
     <string name="local_ai_generating">Generating response…</string>
+    
+    <!-- Dynamic Feature Module Title (required for Play Feature Delivery) -->
+    <string name="local_inference_title">Local AI Models</string>
 </resources>

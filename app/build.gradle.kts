@@ -26,6 +26,12 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        // Restrict to 64-bit ABIs only - matches localinference module
+        // 32-bit (armeabi-v7a, x86) not supported due to llama.cpp float16 requirements
+        ndk {
+            abiFilters += listOf("arm64-v8a", "x86_64")
+        }
     }
 
     dynamicFeatures += setOf(":localinference")

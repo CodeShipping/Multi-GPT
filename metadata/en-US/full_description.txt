@@ -1,15 +1,54 @@
-This is an Material3 style chat app that supports answers from multiple LLMs at once.
+🤖 <b>Chat with Multiple AI Models Simultaneously</b>
 
-Supported Platforms
-- OpenAI GPT (GPT-4o, turbo, etc)
-- Anthropic Claude (3.5 Sonnet, 3 Opus, etc)
-- Google Gemini (1.5 Pro, Flash, etc)
-- Groq (Fast inference server for various models)
-- Ollama (Your own server)
+MultiGPT lets you chat with <b>ChatGPT, Claude, Gemini, and 5+ leading AI assistants</b> in one powerful Android app. Ask one question and get diverse perspectives from the world's top AI models!
 
-Local chat history
-Chat history is only saved locally. The app only sends to official API servers while chatting. NOT SHARED anywhere else.
+<b>🔥 Supported AI Platforms:</b>
+• <b>OpenAI</b>: ChatGPT (GPT-4o, GPT-4 Turbo, GPT-3.5)
+• <b>Anthropic</b>: Claude 3.5 Sonnet, Claude 3 Opus, Claude 3 Haiku
+• <b>Google</b>: Gemini 1.5 Pro, Gemini 1.5 Flash, Gemini 1.0 Pro
+• <b>Groq</b>: Lightning-fast AI inference with Llama, Mixtral
+• <b>AWS Bedrock</b>: Enterprise foundation models
+• <b>Ollama</b>: Run AI models locally on your own server
+• <b>Local AI</b>: Run LLMs directly on your phone - Llama 3.2, Qwen, Phi, Gemma, and more! No internet required.
 
-Custom API address and custom model name supported. Also, adjust system prompt, top p, temperature, and more!
+<b>📱 NEW: On-Device AI (Local Models)</b>
+Run AI models completely offline on your Android device! Download and run models like Llama 3.2, Qwen 2.5, Phi 3, Gemma 2, SmolLM, and more. Your conversations never leave your device - true privacy without any cloud dependency.
 
-Note that some platforms may not be supported in some countries.
+<b>⚡ Why Choose MultiGPT?</b>
+✅ <b>Compare AI Responses</b>: See how different AI models answer the same question
+✅ <b>Offline AI</b>: Run local LLMs without internet connection
+✅ <b>Privacy First</b>: All conversations stored locally on your device
+✅ <b>No Monthly Subscriptions</b>: Use your own API keys, pay only what you use
+✅ <b>Advanced AI Controls</b>: Adjust temperature, system prompts, and AI behavior
+✅ <b>Material You Design</b>: Beautiful, modern Android interface
+✅ <b>Multi-language Support</b>: Available in 10+ languages
+
+<b>🎯 Perfect For:</b>
+• Developers comparing AI model capabilities and performance
+• Researchers seeking diverse AI perspectives on complex topics
+• Students getting comprehensive help with homework and projects
+• Content creators overcoming writer's block with AI assistance
+• Professionals making better decisions with multiple AI insights
+• Privacy-conscious users wanting offline AI capabilities
+• Anyone curious about differences between AI models
+
+<b>🛡️ 100% Private & Secure:</b>
+Your conversations never leave your device. MultiGPT communicates directly with official AI APIs only - no data collection, no tracking, no cloud storage of your chats. With local models, even API calls are eliminated!
+
+<b>🚀 Advanced Features:</b>
+• On-device AI inference with GGUF model support
+• Import your own AI models from device storage
+• Custom API endpoints and model names supported
+• Adjustable AI parameters (temperature, top-p, max tokens)
+• Conversation history with search functionality
+• Export chats in multiple formats
+• Dark mode and dynamic theming
+
+<b>📲 Local AI Model Requirements:</b>
+• 4GB+ RAM for small models (1B-3B parameters)
+• 8GB+ RAM for medium models (7B parameters)
+• ARM64 device recommended for best performance
+
+Download MultiGPT today and experience the future of AI conversation. Compare the best AI models side-by-side and discover which AI assistant works best for your needs!
+
+<b>Popular searches</b>: AI chat app, ChatGPT alternative, Claude AI, multi AI chat, compare AI models, artificial intelligence assistant, GPT-4 app, AI conversation, offline AI, local LLM, run AI on phone, Llama 3 Android, on-device AI, private AI chat
