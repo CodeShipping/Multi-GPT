@@ -325,8 +325,12 @@ fun ChatScreen(
                             .animateItem()
                     ) {
                             Spacer(modifier = Modifier.width(8.dp))
-                            chatViewModel.enabledPlatformsInChat.sorted().forEach { apiType ->
-                                val message = when (apiType) {
+                            // Only show the active provider (the one currently selected in currentModels)
+                            val activeApiType = currentModels.keys.firstOrNull() 
+                                ?: chatViewModel.enabledPlatformsInChat.firstOrNull()
+                            
+                            if (activeApiType != null) {
+                                val message = when (activeApiType) {
                                     ApiType.OPENAI -> openAIMessage
                                     ApiType.ANTHROPIC -> anthropicMessage
                                     ApiType.GOOGLE -> googleMessage
@@ -336,7 +340,7 @@ fun ChatScreen(
                                     ApiType.LOCAL -> localMessage
                                 }
 
-                                val loadingState = when (apiType) {
+                                val loadingState = when (activeApiType) {
                                     ApiType.OPENAI -> openaiLoadingState
                                     ApiType.ANTHROPIC -> anthropicLoadingState
                                     ApiType.GOOGLE -> googleLoadingState
@@ -350,7 +354,7 @@ fun ChatScreen(
                                 if (loadingState == ChatViewModel.LoadingState.Loading && message.content.isEmpty()) {
                                     TypingIndicator(
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 12.dp),
-                                        apiType = apiType
+                                        apiType = activeApiType
                                     )
                                 } else {
                                     OpponentChatBubble(
@@ -359,9 +363,9 @@ fun ChatScreen(
                                             .widthIn(max = maximumChatBubbleWidth),
                                         canRetry = canUseChat,
                                         isLoading = loadingState == ChatViewModel.LoadingState.Loading,
-                                        apiType = apiType,
+                                        apiType = activeApiType,
                                         text = message.content,
-                                        modelName = currentModels[apiType],
+                                        modelName = currentModels[activeApiType],
                                         onCopyClick = { 
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             clipboardManager.setText(AnnotatedString(message.content.trim()))

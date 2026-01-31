@@ -31,7 +31,8 @@ class HomeViewModel @Inject constructor(
     data class ChatListState(
         val chats: List<ChatRoom> = listOf(),
         val isSelectionMode: Boolean = false,
-        val selected: List<Boolean> = listOf()
+        val selected: List<Boolean> = listOf(),
+        val usedPlatformsMap: Map<Int, List<ApiType>> = emptyMap() // Actually used platforms per chat
     )
 
     private val _chatListState = MutableStateFlow(ChatListState())
@@ -123,16 +124,21 @@ class HomeViewModel @Inject constructor(
     fun fetchChats() {
         viewModelScope.launch {
             val chats = chatRepository.fetchChatList()
+            
+            // Fetch actually used platforms for all chats
+            val usedPlatformsMap = chatRepository.getAllChatsUsedPlatforms()
 
             _chatListState.update {
                 it.copy(
                     chats = chats,
                     selected = List(chats.size) { false },
-                    isSelectionMode = false
+                    isSelectionMode = false,
+                    usedPlatformsMap = usedPlatformsMap
                 )
             }
 
             Log.d("chats", "${_chatListState.value.chats}")
+            Log.d("HomeViewModel", "Used platforms per chat: $usedPlatformsMap")
         }
     }
 

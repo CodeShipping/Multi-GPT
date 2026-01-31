@@ -25,8 +25,9 @@ include(":app")
 include(":localinference")
 
 // Use local llama-kotlin-android project for development/testing
-includeBuild("/Users/kumpraso/personal-workspace/llama-kotlin-android") {
-    dependencySubstitution {
-        substitute(module("org.codeshipping:llama-kotlin-android")).using(project(":app"))
-    }
-}
+// Commented out - now using Maven Central published version (0.1.1)
+// includeBuild("/Users/kumpraso/personal-workspace/llama-kotlin-android") {
+//     dependencySubstitution {
+//         substitute(module("org.codeshipping:llama-kotlin-android")).using(project(":app"))
+//     }
+// }

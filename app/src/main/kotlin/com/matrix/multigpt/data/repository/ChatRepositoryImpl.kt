@@ -266,6 +266,31 @@ class ChatRepositoryImpl @Inject constructor(
         chatRoomDao.deleteChatRooms(*chatRooms.toTypedArray())
     }
 
+    override suspend fun getUsedPlatformsForChat(chatId: Int): List<ApiType> {
+        val platformStrings = messageDao.getUsedPlatforms(chatId)
+        return platformStrings.mapNotNull { platformStr ->
+            try {
+                ApiType.valueOf(platformStr)
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
+
+    override suspend fun getAllChatsUsedPlatforms(): Map<Int, List<ApiType>> {
+        val chatPlatforms = messageDao.getAllChatsUsedPlatforms()
+        return chatPlatforms.associate { chatUsedPlatforms ->
+            val platforms = chatUsedPlatforms.platforms?.split(",")?.mapNotNull { platformStr ->
+                try {
+                    ApiType.valueOf(platformStr.trim())
+                } catch (e: Exception) {
+                    null
+                }
+            } ?: emptyList()
+            chatUsedPlatforms.chatId to platforms
+        }
+    }
+
     private fun messageToOpenAICompatibleMessage(apiType: ApiType, messages: List<Message>): List<ChatMessage> {
         val result = mutableListOf<ChatMessage>()
 

@@ -76,6 +76,10 @@ fun SettingScreen(
                 .verticalScroll(scrollState)
         ) {
             ThemeSetting { settingViewModel.openThemeDialog() }
+            
+            // Local AI Models - On-device inference (top priority, right after theme)
+            LocalAISettingItem(onItemClick = onNavigateToLocalAI)
+            
             // Cloud-based API platforms (exclude LOCAL since it has dedicated settings)
             ApiType.entries.filter { it != ApiType.LOCAL }.forEach { apiType ->
                 SettingItem(
@@ -86,9 +90,6 @@ fun SettingScreen(
                     showLeadingIcon = false
                 )
             }
-            
-            // Local AI Models - On-device inference (separate dedicated settings)
-            LocalAISettingItem(onItemClick = onNavigateToLocalAI)
             
             AboutPageItem(onItemClick = onNavigateToAboutPage)
 

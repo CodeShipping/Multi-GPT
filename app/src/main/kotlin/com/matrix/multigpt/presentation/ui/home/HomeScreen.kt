@@ -206,7 +206,19 @@ fun HomeScreen(
         ) {
             item { ChatsTitle(scrollBehavior) }
             itemsIndexed(chatListState.chats, key = { _, it -> it.id }) { idx, chatRoom ->
-                val usingPlatform = chatRoom.enabledPlatform.joinToString(", ") { platformTitles[it] ?: "" }
+                // Use actually used platforms from messages, fall back to enabled platforms if empty
+                val actualUsedPlatforms = chatListState.usedPlatformsMap[chatRoom.id] ?: emptyList()
+                val platformsToShow = if (actualUsedPlatforms.isNotEmpty()) actualUsedPlatforms else chatRoom.enabledPlatform
+                val usingPlatform = when {
+                    platformsToShow.size <= 2 -> {
+                        platformsToShow.joinToString(", ") { platformTitles[it] ?: it.name }
+                    }
+                    else -> {
+                        val first = platformTitles[platformsToShow.first()] ?: platformsToShow.first().name
+                        val remaining = platformsToShow.size - 1
+                        "$first and $remaining more"
+                    }
+                }
                 ListItem(
                     modifier = Modifier
                         .fillMaxWidth()

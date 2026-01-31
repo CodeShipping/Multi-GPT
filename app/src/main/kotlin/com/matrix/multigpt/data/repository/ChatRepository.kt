@@ -3,6 +3,7 @@ package com.matrix.multigpt.data.repository
 import com.matrix.multigpt.data.database.entity.ChatRoom
 import com.matrix.multigpt.data.database.entity.Message
 import com.matrix.multigpt.data.dto.ApiState
+import com.matrix.multigpt.data.model.ApiType
 import kotlinx.coroutines.flow.Flow
 
 interface ChatRepository {
@@ -19,4 +20,16 @@ interface ChatRepository {
     suspend fun updateChatTitle(chatRoom: ChatRoom, title: String)
     suspend fun saveChat(chatRoom: ChatRoom, messages: List<Message>): ChatRoom
     suspend fun deleteChats(chatRooms: List<ChatRoom>)
+    
+    /**
+     * Get the actually used platforms for a specific chat.
+     * Returns platforms from messages that have actual AI responses.
+     */
+    suspend fun getUsedPlatformsForChat(chatId: Int): List<ApiType>
+    
+    /**
+     * Get all actually used platforms for all chats.
+     * Returns a map of chatId to list of used platforms.
+     */
+    suspend fun getAllChatsUsedPlatforms(): Map<Int, List<ApiType>>
 }

@@ -228,7 +228,7 @@
     
     <!-- Local AI Platform -->
     <string name="local_ai" translatable="false">Local AI</string>
-    <string name="local_ai_platform_description">Run AI models on your device. Private and offline.</string>
+    <string name="local_ai_platform_description">Download and run AI models offline and private.</string>
     <string name="local_ai_model">Selected Model</string>
     <string name="local_ai_help" translatable="false">https://github.com/CodeShipping/Multi-GPT#local-ai</string>
     <string name="select_local_model">Select Local Model</string>
