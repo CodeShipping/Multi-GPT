@@ -25,6 +25,10 @@ class LocalModelDownloadState @Inject constructor() {
     private val _totalBytesMap = MutableStateFlow<Map<String, Long>>(emptyMap())
     val totalBytesMap: StateFlow<Map<String, Long>> = _totalBytesMap.asStateFlow()
 
+    // Track successfully completed downloads so ViewModels can observe
+    private val _completedDownloads = MutableStateFlow<Set<String>>(emptySet())
+    val completedDownloads: StateFlow<Set<String>> = _completedDownloads.asStateFlow()
+
     fun startDownload(modelId: String, totalSize: Long) {
         _downloadingModels.value = _downloadingModels.value + modelId
         _downloadProgressMap.value = _downloadProgressMap.value + (modelId to 0f)
@@ -38,6 +42,21 @@ class LocalModelDownloadState @Inject constructor() {
         if (totalBytes > 0) {
             _totalBytesMap.value = _totalBytesMap.value + (modelId to totalBytes)
         }
+    }
+
+    /**
+     * Mark a download as successfully completed.
+     * Call this before completeDownload to signal successful download.
+     */
+    fun markDownloadSuccess(modelId: String) {
+        _completedDownloads.value = _completedDownloads.value + modelId
+    }
+
+    /**
+     * Acknowledge a completed download (remove from completed set).
+     */
+    fun acknowledgeCompletion(modelId: String) {
+        _completedDownloads.value = _completedDownloads.value - modelId
     }
 
     fun completeDownload(modelId: String) {

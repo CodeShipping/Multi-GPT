@@ -25,7 +25,8 @@ data class ModelInfo(
     val isRecommended: Boolean,
     val downloadUrl: String,
     val performance: String,
-    val isImported: Boolean = false
+    val isImported: Boolean = false,
+    val filePath: String? = null
 )
 
 /**
@@ -76,6 +77,26 @@ class LocalAIModelsViewModel @Inject constructor(
 
     init {
         loadModels()
+        observeCompletedDownloads()
+    }
+
+    /**
+     * Observe completed downloads from the singleton state.
+     * This ensures UI updates even when downloads complete while the ViewModel exists.
+     */
+    private fun observeCompletedDownloads() {
+        viewModelScope.launch {
+            downloadState.completedDownloads.collect { completedIds ->
+                if (completedIds.isNotEmpty()) {
+                    // Add completed downloads to our downloaded models set
+                    _downloadedModels.value = _downloadedModels.value + completedIds
+                    // Acknowledge each completion
+                    completedIds.forEach { modelId ->
+                        downloadState.acknowledgeCompletion(modelId)
+                    }
+                }
+            }
+        }
     }
 
     fun loadModels() {
@@ -173,7 +194,8 @@ class LocalAIModelsViewModel @Inject constructor(
                 )
                 
                 if (success) {
-                    _downloadedModels.value = _downloadedModels.value + model.id
+                    // Mark as successfully completed in singleton (triggers observer)
+                    downloadState.markDownloadSuccess(model.id)
                     // Show completion notification
                     ModelDownloadNotificationHelper.showCompleteNotification(
                         context, model.id, model.name
@@ -603,13 +625,20 @@ class LocalAIModelsViewModel @Inject constructor(
         }
     }
 
-    private fun getModelPath(modelId: String): String? {
+    /**
+     * Get the local file path for a downloaded model.
+     * Public to allow UI to retrieve path when navigating.
+     */
+    fun getModelPath(modelId: String): String? {
         return try {
             val provider = getProvider()
             val getPathMethod = provider.javaClass.getMethod("getModelPath", String::class.java)
             getPathMethod.invoke(provider, modelId) as? String
         } catch (e: Exception) {
-            null
+            // For imported models, check the models directory
+            val modelsDir = File(context.filesDir, "models")
+            val modelFile = File(modelsDir, "$modelId.gguf")
+            if (modelFile.exists()) modelFile.absolutePath else null
         }
     }
 

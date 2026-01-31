@@ -227,29 +227,26 @@ fun LocalAIModelsScreen(
                                 val isDownloading = downloadingModels.contains(model.id)
                                 val isSelected = selectedModelId == model.id
                                 
-                                ModelCard(
-                                    model = model,
-                                    isDownloaded = isDownloaded,
-                                    isDownloading = isDownloading,
-                                    isSelected = isSelected,
-                                    downloadProgress = downloadProgressMap[model.id] ?: 0f,
-                                    downloadedBytes = downloadedBytesMap[model.id] ?: 0L,
-                                    totalBytes = totalBytesMap[model.id] ?: 0L,
-                                    onDownload = { viewModel.startDownload(model) },
-                                    onDelete = { showDeleteDialog = model },
-                                    onUseModel = {
-                                        viewModel.selectModel(model)
-                                        Toast.makeText(
-                                            context, 
-                                            "Selected ${model.name}. Create a new chat to use it.", 
-                                            Toast.LENGTH_LONG
-                                        ).show()
-                                        onNavigateBack()
-                                    },
-                                    onClick = { }
-                                )
-                            }
+                            ModelCard(
+                                model = model,
+                                isDownloaded = isDownloaded,
+                                isDownloading = isDownloading,
+                                isSelected = isSelected,
+                                downloadProgress = downloadProgressMap[model.id] ?: 0f,
+                                downloadedBytes = downloadedBytesMap[model.id] ?: 0L,
+                                totalBytes = totalBytesMap[model.id] ?: 0L,
+                                onDownload = { viewModel.startDownload(model) },
+                                onDelete = { showDeleteDialog = model },
+                                onUseModel = {
+                                    viewModel.selectModel(model)
+                                    // Use onNavigateToChat to continue to next step (setup) or back (settings)
+                                    val modelPath = viewModel.getModelPath(model.id) ?: ""
+                                    onNavigateToChat(model.id, modelPath)
+                                },
+                                onClick = { }
+                            )
                         }
+                    }
                         
                         // Downloadable Models Section
                         item {
@@ -278,12 +275,9 @@ fun LocalAIModelsScreen(
                                 onDelete = { showDeleteDialog = model },
                                 onUseModel = {
                                     viewModel.selectModel(model)
-                                    Toast.makeText(
-                                        context, 
-                                        "Selected ${model.name}. Create a new chat to use it.", 
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                    onNavigateBack()
+                                    // Use onNavigateToChat to continue to next step (setup) or back (settings)
+                                    val modelPath = viewModel.getModelPath(model.id) ?: ""
+                                    onNavigateToChat(model.id, modelPath)
                                 },
                                 onClick = { }
                             )
@@ -469,16 +463,21 @@ private fun ModelCard(
                                 }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            FilledTonalButton(
-                                onClick = onDelete,
-                                colors = ButtonDefaults.filledTonalButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                )
+                            // Use Model button - primary action
+                            Button(
+                                onClick = onUseModel
                             ) {
-                                Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Delete")
+                                Text("Use Model")
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            IconButton(
+                                onClick = onDelete,
+                            ) {
+                                Icon(
+                                    Icons.Filled.Delete,
+                                    contentDescription = "Delete",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
                             }
                         }
                     }
