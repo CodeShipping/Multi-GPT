@@ -19,7 +19,7 @@ android {
         applicationId = "com.matrix.multigpt"
         minSdk = 31
         targetSdk = 36
-        versionCode = 14
+        versionCode = 15
         versionName = "1.26.02"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

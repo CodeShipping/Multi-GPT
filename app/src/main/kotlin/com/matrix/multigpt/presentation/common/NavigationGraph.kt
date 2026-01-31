@@ -187,7 +187,23 @@ fun NavGraphBuilder.setupNavigation(
                 navController.getBackStackEntry(Route.SETUP_ROUTE)
             }
             val setupViewModel: SetupViewModel = hiltViewModel(parentEntry)
-            // Use LocalAIModelsScreen for model download in setup flow
+            // Use LocalAIEntryScreen to ensure feature is installed first
+            LocalAIEntryScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onFeatureReady = {
+                    // Feature installed, navigate to models screen in setup flow
+                    navController.navigate(Route.SETUP_LOCAL_AI_MODELS) {
+                        popUpTo(Route.LOCAL_MODEL_SELECT) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(route = Route.SETUP_LOCAL_AI_MODELS) {
+            val parentEntry = remember(it) {
+                navController.getBackStackEntry(Route.SETUP_ROUTE)
+            }
+            val setupViewModel: SetupViewModel = hiltViewModel(parentEntry)
+            // Local AI Models screen within setup flow
             LocalAIModelsScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onNavigateToChat = { modelId: String, modelPath: String ->

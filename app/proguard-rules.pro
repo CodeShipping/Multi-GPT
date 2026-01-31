@@ -50,3 +50,51 @@
 # Keep necessary Android classes
 -keep class androidx.** { *; }
 -keep class com.google.android.** { *; }
+
+# =====================================================
+# LocalInference Dynamic Feature Module - Reflection Access
+# =====================================================
+# The main app accesses these classes via reflection when the dynamic feature is installed
+-keep class com.matrix.multigpt.localinference.LocalInferenceProvider {
+    public static ** Companion;
+    public *;
+}
+-keep class com.matrix.multigpt.localinference.LocalInferenceProvider$Companion {
+    public *;
+}
+
+# Keep repository classes accessed via reflection
+-keep class com.matrix.multigpt.localinference.data.repository.** {
+    public *;
+}
+
+# Keep model data classes
+-keep class com.matrix.multigpt.localinference.data.model.** {
+    *;
+}
+
+# Keep download manager classes
+-keep class com.matrix.multigpt.localinference.service.** {
+    public *;
+}
+
+# Keep presentation classes
+-keep class com.matrix.multigpt.localinference.presentation.** {
+    public *;
+}
+
+# Keep all classes in localinference module for reflection
+-keep class com.matrix.multigpt.localinference.** {
+    *;
+}
+-keepclassmembers class com.matrix.multigpt.localinference.** {
+    *;
+}
+
+# Keep Kotlin Companion objects (needed for reflection to find Companion field)
+-keepclassmembers class * {
+    public static ** Companion;
+}
+-keepnames class * {
+    public static ** Companion;
+}

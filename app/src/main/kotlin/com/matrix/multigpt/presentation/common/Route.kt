@@ -37,4 +37,5 @@ object Route {
     const val LOCAL_AI_ENTRY = "local_ai_entry"
     const val LOCAL_AI_MODELS = "local_ai_models"
     const val LOCAL_AI_SETTINGS = "local_ai_settings"
+    const val SETUP_LOCAL_AI_MODELS = "setup_local_ai_models"  // Used in setup flow
 }
