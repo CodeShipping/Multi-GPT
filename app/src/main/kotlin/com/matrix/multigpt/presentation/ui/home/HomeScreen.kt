@@ -136,10 +136,14 @@ fun HomeScreen(
         floatingActionButton = {
             NewChatButton(
                 expanded = listState.isScrollingUp(),
-                enabled = isPlatformsLoaded && platformState.any { it.enabled },
+                enabled = true, // Always enabled, but shows toast if no platforms configured
                 onClick = {
                     if (!isPlatformsLoaded) return@NewChatButton
                     val enabledApiTypes = platformState.filter { it.enabled }.map { it.name }
+                    if (enabledApiTypes.isEmpty()) {
+                        Toast.makeText(context, context.getString(R.string.enable_at_leat_one_platform), Toast.LENGTH_LONG).show()
+                        return@NewChatButton
+                    }
                     if (enabledApiTypes.size == 1) {
                         // Navigate to new chat directly if only one platform is enabled
                         navigateToNewChat(enabledApiTypes)

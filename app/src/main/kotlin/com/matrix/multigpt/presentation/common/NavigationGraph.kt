@@ -347,7 +347,8 @@ fun NavGraphBuilder.settingNavigation(navController: NavHostController) {
             LocalAIModelsScreen(
                 onNavigateBack = { navController.navigateUp() },
                 onNavigateToChat = { modelId: String, modelPath: String ->
-                    // TODO: Navigate to local chat with the selected model
+                    // Model selected - navigate back to settings
+                    // User will create new chat from home screen with LOCAL platform enabled
                     navController.navigateUp()
                 }
             )

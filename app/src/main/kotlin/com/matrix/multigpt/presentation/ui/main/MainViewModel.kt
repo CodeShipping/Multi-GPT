@@ -1,8 +1,10 @@
 package com.matrix.multigpt.presentation.ui.main
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.matrix.multigpt.data.repository.SettingRepository
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -15,7 +17,10 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 @HiltViewModel
-class MainViewModel @Inject constructor(private val settingRepository: SettingRepository) : ViewModel() {
+class MainViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
+    private val settingRepository: SettingRepository
+) : ViewModel() {
 
     sealed class SplashEvent {
         data object OpenIntro : SplashEvent()
@@ -31,11 +36,16 @@ class MainViewModel @Inject constructor(private val settingRepository: SettingRe
     init {
         viewModelScope.launch {
             val platforms = settingRepository.fetchPlatforms()
+            
+            // Also check if LOCAL is enabled via SharedPreferences
+            val localPrefs = context.getSharedPreferences("local_ai_prefs", Context.MODE_PRIVATE)
+            val localEnabled = localPrefs.getBoolean("local_enabled", false)
 
-            if (platforms.all { it.enabled.not() }) {
-                // Initialize
+            if (platforms.all { it.enabled.not() } && !localEnabled) {
+                // No platforms enabled - show intro
                 sendSplashEvent(SplashEvent.OpenIntro)
             } else {
+                // At least one platform (or LOCAL) is enabled - go to home
                 sendSplashEvent(SplashEvent.OpenHome)
             }
 

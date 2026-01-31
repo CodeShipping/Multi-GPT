@@ -43,15 +43,14 @@ class LocalInferenceServiceImpl @Inject constructor(
                     return@withContext Result.failure(IllegalArgumentException("Model file not found: $modelPath"))
                 }
                 
-                // Create config for the model using DSL syntax
-                val config = LlamaConfig {
+                // Load the model with optimized settings
+                val model = LlamaModel.load(modelPath) {
                     this.contextSize = contextSize
-                    this.batchSize = 512
-                    this.gpuLayers = 0 // CPU only for compatibility
+                    this.threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 8) // Use multiple CPU cores
+                    this.temperature = 0.7f
+                    this.topP = 0.9f
+                    this.topK = 40
                 }
-                
-                // Load the model
-                val model = LlamaModel.load(modelPath, config)
                 
                 llamaModel = model
                 loadedModelInfo = LoadedModelInfo(
@@ -94,18 +93,11 @@ class LocalInferenceServiceImpl @Inject constructor(
             // Format messages into a prompt
             val prompt = formatChatPrompt(messages)
             
-            // Create config override for this generation using DSL syntax
-            val config = LlamaConfig {
-                this.temperature = temperature
-                this.maxTokens = maxTokens
-            }
-            
-            // Generate the response
-            val result = model.generate(prompt, config)
-            
-            // Emit the full result
-            if (!shouldCancel.get()) {
-                emit(result)
+            // Use streaming generation for real-time token output
+            model.generateStream(prompt).collect { token ->
+                if (!shouldCancel.get()) {
+                    emit(token)
+                }
             }
             
         } finally {
@@ -156,34 +148,43 @@ class LocalInferenceServiceImpl @Inject constructor(
     
     /**
      * Format chat messages into a prompt string.
-     * Uses ChatML format compatible with most instruction-tuned models.
+     * Uses Llama 3.x Instruct format for best compatibility with Llama models.
+     * Reference: https://llama.meta.com/docs/model-cards-and-prompt-formats/llama3_2
      */
     private fun formatChatPrompt(messages: List<ChatMessage>): String {
-        val sb = StringBuilder()
-        
-        for (message in messages) {
-            when (message.role) {
-                ChatRole.SYSTEM -> {
-                    sb.append("<|im_start|>system\n")
-                    sb.append(message.content)
-                    sb.append("<|im_end|>\n")
-                }
-                ChatRole.USER -> {
-                    sb.append("<|im_start|>user\n")
-                    sb.append(message.content)
-                    sb.append("<|im_end|>\n")
-                }
-                ChatRole.ASSISTANT -> {
-                    sb.append("<|im_start|>assistant\n")
-                    sb.append(message.content)
-                    sb.append("<|im_end|>\n")
+        return buildString {
+            append("<|begin_of_text|>")
+            
+            // Check if there's a system message, otherwise add default
+            val hasSystem = messages.any { it.role == ChatRole.SYSTEM }
+            if (!hasSystem) {
+                append("<|start_header_id|>system<|end_header_id|>\n\n")
+                append("You are a helpful AI assistant.")
+                append("<|eot_id|>")
+            }
+            
+            for (message in messages) {
+                when (message.role) {
+                    ChatRole.SYSTEM -> {
+                        append("<|start_header_id|>system<|end_header_id|>\n\n")
+                        append(message.content)
+                        append("<|eot_id|>")
+                    }
+                    ChatRole.USER -> {
+                        append("<|start_header_id|>user<|end_header_id|>\n\n")
+                        append(message.content)
+                        append("<|eot_id|>")
+                    }
+                    ChatRole.ASSISTANT -> {
+                        append("<|start_header_id|>assistant<|end_header_id|>\n\n")
+                        append(message.content)
+                        append("<|eot_id|>")
+                    }
                 }
             }
+            
+            // Add the assistant prefix to prompt the model to respond
+            append("<|start_header_id|>assistant<|end_header_id|>\n\n")
         }
-        
-        // Add the assistant prefix to prompt the model to respond
-        sb.append("<|im_start|>assistant\n")
-        
-        return sb.toString()
     }
 }

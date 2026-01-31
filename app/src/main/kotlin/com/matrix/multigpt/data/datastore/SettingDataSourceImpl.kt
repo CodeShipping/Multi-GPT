@@ -98,14 +98,16 @@ class SettingDataSourceImpl @Inject constructor(
     }
 
     override suspend fun updateStatus(apiType: ApiType, status: Boolean) {
+        val key = apiStatusMap[apiType] ?: return
         dataStore.edit { pref ->
-            pref[apiStatusMap[apiType]!!] = status
+            pref[key] = status
         }
     }
 
     override suspend fun updateAPIUrl(apiType: ApiType, url: String) {
+        val key = apiUrlMap[apiType] ?: return
         dataStore.edit { pref ->
-            pref[apiUrlMap[apiType]!!] = url
+            pref[key] = url
         }
     }
 
@@ -114,33 +116,38 @@ class SettingDataSourceImpl @Inject constructor(
             // Use secure storage for sensitive AWS credentials
             secureCredentialManager.storeCredentials("bedrock_credentials", token)
         } else {
+            val key = apiTokenMap[apiType] ?: return
             dataStore.edit { pref ->
-                pref[apiTokenMap[apiType]!!] = token
+                pref[key] = token
             }
         }
     }
 
     override suspend fun updateModel(apiType: ApiType, model: String) {
+        val key = apiModelMap[apiType] ?: return
         dataStore.edit { pref ->
-            pref[apiModelMap[apiType]!!] = model
+            pref[key] = model
         }
     }
 
     override suspend fun updateTemperature(apiType: ApiType, temperature: Float) {
+        val key = apiTemperatureMap[apiType] ?: return
         dataStore.edit { pref ->
-            pref[apiTemperatureMap[apiType]!!] = temperature
+            pref[key] = temperature
         }
     }
 
     override suspend fun updateTopP(apiType: ApiType, topP: Float) {
+        val key = apiTopPMap[apiType] ?: return
         dataStore.edit { pref ->
-            pref[apiTopPMap[apiType]!!] = topP
+            pref[key] = topP
         }
     }
 
     override suspend fun updateSystemPrompt(apiType: ApiType, prompt: String) {
+        val key = apiSystemPromptMap[apiType] ?: return
         dataStore.edit { pref ->
-            pref[apiSystemPromptMap[apiType]!!] = prompt
+            pref[key] = prompt
         }
     }
 
@@ -160,38 +167,57 @@ class SettingDataSourceImpl @Inject constructor(
         return ThemeMode.getByValue(mode)
     }
 
-    override suspend fun getStatus(apiType: ApiType): Boolean? = dataStore.data.map { pref ->
-        pref[apiStatusMap[apiType]!!]
-    }.first()
+    override suspend fun getStatus(apiType: ApiType): Boolean? {
+        val key = apiStatusMap[apiType] ?: return null
+        return dataStore.data.map { pref ->
+            pref[key]
+        }.first()
+    }
 
-    override suspend fun getAPIUrl(apiType: ApiType): String? = dataStore.data.map { pref ->
-        pref[apiUrlMap[apiType]!!]
-    }.first()
+    override suspend fun getAPIUrl(apiType: ApiType): String? {
+        val key = apiUrlMap[apiType] ?: return null
+        return dataStore.data.map { pref ->
+            pref[key]
+        }.first()
+    }
 
     override suspend fun getToken(apiType: ApiType): String? {
         return if (apiType == ApiType.BEDROCK) {
             // Retrieve AWS credentials from secure storage
             secureCredentialManager.retrieveCredentials("bedrock_credentials")
         } else {
+            val key = apiTokenMap[apiType] ?: return null
             dataStore.data.map { pref ->
-                pref[apiTokenMap[apiType]!!]
+                pref[key]
             }.first()
         }
     }
 
-    override suspend fun getModel(apiType: ApiType): String? = dataStore.data.map { pref ->
-        pref[apiModelMap[apiType]!!]
-    }.first()
+    override suspend fun getModel(apiType: ApiType): String? {
+        val key = apiModelMap[apiType] ?: return null
+        return dataStore.data.map { pref ->
+            pref[key]
+        }.first()
+    }
 
-    override suspend fun getTemperature(apiType: ApiType): Float? = dataStore.data.map { pref ->
-        pref[apiTemperatureMap[apiType]!!]
-    }.first()
+    override suspend fun getTemperature(apiType: ApiType): Float? {
+        val key = apiTemperatureMap[apiType] ?: return null
+        return dataStore.data.map { pref ->
+            pref[key]
+        }.first()
+    }
 
-    override suspend fun getTopP(apiType: ApiType): Float? = dataStore.data.map { pref ->
-        pref[apiTopPMap[apiType]!!]
-    }.first()
+    override suspend fun getTopP(apiType: ApiType): Float? {
+        val key = apiTopPMap[apiType] ?: return null
+        return dataStore.data.map { pref ->
+            pref[key]
+        }.first()
+    }
 
-    override suspend fun getSystemPrompt(apiType: ApiType): String? = dataStore.data.map { pref ->
-        pref[apiSystemPromptMap[apiType]!!]
-    }.first()
+    override suspend fun getSystemPrompt(apiType: ApiType): String? {
+        val key = apiSystemPromptMap[apiType] ?: return null
+        return dataStore.data.map { pref ->
+            pref[key]
+        }.first()
+    }
 }

@@ -153,6 +153,8 @@ fun ChatScreen(
     val ollamaMessage by chatViewModel.ollamaMessage.collectAsStateWithLifecycle()
     val bedrockMessage by chatViewModel.bedrockMessage.collectAsStateWithLifecycle()
     val bedrockLoadingState by chatViewModel.bedrockLoadingState.collectAsStateWithLifecycle()
+    val localMessage by chatViewModel.localMessage.collectAsStateWithLifecycle()
+    val localLoadingState by chatViewModel.localLoadingState.collectAsStateWithLifecycle()
     val geminiNano by chatViewModel.geminiNanoMessage.collectAsStateWithLifecycle()
     val canUseChat = (chatViewModel.enabledPlatformsInChat.toSet() - appEnabledPlatforms.toSet()).isEmpty()
     val groupedMessages = remember(messages) { groupMessages(messages) }
@@ -331,7 +333,7 @@ fun ChatScreen(
                                     ApiType.GROQ -> groqMessage
                                     ApiType.OLLAMA -> ollamaMessage
                                     ApiType.BEDROCK -> bedrockMessage
-                                    ApiType.LOCAL -> ollamaMessage // TODO: Add localMessage
+                                    ApiType.LOCAL -> localMessage
                                 }
 
                                 val loadingState = when (apiType) {
@@ -341,7 +343,7 @@ fun ChatScreen(
                                     ApiType.GROQ -> groqLoadingState
                                     ApiType.OLLAMA -> ollamaLoadingState
                                     ApiType.BEDROCK -> bedrockLoadingState
-                                    ApiType.LOCAL -> ollamaLoadingState // TODO: Add localLoadingState
+                                    ApiType.LOCAL -> localLoadingState
                                 }
 
                                 // Show typing indicator if loading and no content yet

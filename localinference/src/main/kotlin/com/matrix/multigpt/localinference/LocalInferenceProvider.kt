@@ -10,11 +10,15 @@ import com.matrix.multigpt.localinference.data.repository.LocalModelRepositoryIm
 import com.matrix.multigpt.localinference.data.source.LocalModelCacheDataSource
 import com.matrix.multigpt.localinference.data.source.ModelDownloadManager
 import com.matrix.multigpt.localinference.presentation.ui.compose.ModelListScreen
+import com.matrix.multigpt.localinference.service.ChatMessage
+import com.matrix.multigpt.localinference.service.ChatRole
 import com.matrix.multigpt.localinference.service.LocalInferenceService
 import com.matrix.multigpt.localinference.service.LocalInferenceServiceImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 
 /**
@@ -128,6 +132,59 @@ class LocalInferenceProvider private constructor(context: Context) {
     fun cleanup() {
         downloadManager.cleanup()
         inferenceService.unloadModel()
+    }
+    
+    /**
+     * Generate a chat response with automatic model loading.
+     * This is the main entry point for chat completion that handles all complexity internally.
+     * 
+     * @param modelId The ID of the model to use
+     * @param messages List of (role, content) pairs. role can be "user" or "assistant"
+     * @param temperature Sampling temperature (default 0.7)
+     * @param maxTokens Maximum tokens to generate (default 512)
+     * @return Flow of generated text chunks (streaming)
+     */
+    fun generateChatResponse(
+        modelId: String,
+        messages: List<Pair<String, String>>,
+        temperature: Float = 0.7f,
+        maxTokens: Int = 512
+    ): Flow<String> = flow {
+        // Get model path
+        val modelPath = getModelPath(modelId)
+            ?: throw IllegalStateException("Model $modelId not found. Please download it first.")
+        
+        // Load model if not already loaded or if different model
+        val loadedModelId = inferenceService.getLoadedModelId()
+        if (loadedModelId != modelId) {
+            val result = inferenceService.loadModel(modelPath)
+            if (result.isFailure) {
+                throw result.exceptionOrNull() ?: Exception("Failed to load model")
+            }
+        }
+        
+        // Convert messages to ChatMessage format
+        val chatMessages = messages.map { (role, content) ->
+            val chatRole = when (role.lowercase()) {
+                "user" -> ChatRole.USER
+                "assistant" -> ChatRole.ASSISTANT
+                "system" -> ChatRole.SYSTEM
+                else -> ChatRole.USER
+            }
+            ChatMessage(chatRole, content)
+        }
+        
+        // Generate response
+        inferenceService.generateChatCompletion(chatMessages, temperature, maxTokens).collect { token ->
+            emit(token)
+        }
+    }
+    
+    /**
+     * Get the currently loaded model ID.
+     */
+    fun getLoadedModelId(): String? {
+        return inferenceService.getLoadedModelId()
     }
     
     companion object {

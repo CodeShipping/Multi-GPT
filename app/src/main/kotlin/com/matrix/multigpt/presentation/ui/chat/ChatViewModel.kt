@@ -1,9 +1,11 @@
 package com.matrix.multigpt.presentation.ui.chat
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.matrix.multigpt.data.database.entity.ChatRoom
 import com.matrix.multigpt.data.database.entity.Message
 import com.matrix.multigpt.data.dto.ApiState
@@ -25,6 +27,7 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     savedStateHandle: SavedStateHandle,
     private val chatRepository: ChatRepository,
     private val settingRepository: SettingRepository,
@@ -130,6 +133,12 @@ class ChatViewModel @Inject constructor(
     private val _bedrockMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.BEDROCK, modelName = null))
     val bedrockMessage = _bedrockMessage.asStateFlow()
 
+    private val _localMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.LOCAL, modelName = null))
+    val localMessage = _localMessage.asStateFlow()
+    
+    private val _localLoadingState = MutableStateFlow<LoadingState>(LoadingState.Idle)
+    val localLoadingState = _localLoadingState.asStateFlow()
+
     private val _geminiNanoMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = null, modelName = null))
     val geminiNanoMessage = _geminiNanoMessage.asStateFlow()
 
@@ -140,6 +149,7 @@ class ChatViewModel @Inject constructor(
     private val groqFlow = MutableSharedFlow<ApiState>()
     private val ollamaFlow = MutableSharedFlow<ApiState>()
     private val bedrockFlow = MutableSharedFlow<ApiState>()
+    private val localFlow = MutableSharedFlow<ApiState>()
     private val geminiNanoFlow = MutableSharedFlow<ApiState>()
 
     init {
@@ -301,6 +311,7 @@ class ChatViewModel @Inject constructor(
         _groqMessage.update { it.copy(id = 0, content = "") }
         _ollamaMessage.update { it.copy(id = 0, content = "") }
         _bedrockMessage.update { it.copy(id = 0, content = "") }
+        _localMessage.update { it.copy(id = 0, content = "") }
     }
 
     private fun completeChat() {
@@ -335,6 +346,11 @@ class ChatViewModel @Inject constructor(
         if (ApiType.BEDROCK in enabledPlatforms) {
             _bedrockMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.BEDROCK]) }
             completeBedrockChat()
+        }
+        
+        if (ApiType.LOCAL in enabledPlatforms) {
+            _localMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.LOCAL]) }
+            completeLocalChat()
         }
     }
 
@@ -379,6 +395,84 @@ class ChatViewModel @Inject constructor(
             chatFlow.collect { chunk -> bedrockFlow.emit(chunk) }
         }
     }
+    
+    private fun completeLocalChat() {
+        viewModelScope.launch {
+            try {
+                // Get the selected model from SharedPreferences
+                val localPrefs = context.getSharedPreferences("local_ai_prefs", Context.MODE_PRIVATE)
+                val modelId = localPrefs.getString("selected_model_id", null)
+                
+                if (modelId == null) {
+                    localFlow.emit(ApiState.Error("No local model selected. Please select a model in Settings > Local AI."))
+                    return@launch
+                }
+                
+                // Try to use LocalInferenceProvider via reflection
+                try {
+                    val providerClass = Class.forName("com.matrix.multigpt.localinference.LocalInferenceProvider")
+                    val companionField = providerClass.getDeclaredField("Companion")
+                    val companion = companionField.get(null)
+                    val getInstanceMethod = companion.javaClass.getMethod("getInstance", Context::class.java)
+                    val provider = getInstanceMethod.invoke(companion, context)
+                    
+                    // Build messages as List<Pair<String, String>>
+                    val chatMessages = buildLocalChatMessages()
+                    
+                    // Call generateChatResponse(modelId, messages, temperature, maxTokens) which returns Flow<String>
+                    val generateMethod = provider.javaClass.getMethod(
+                        "generateChatResponse",
+                        String::class.java,
+                        List::class.java,
+                        Float::class.javaPrimitiveType,
+                        Int::class.javaPrimitiveType
+                    )
+                    
+                    @Suppress("UNCHECKED_CAST")
+                    val resultFlow = generateMethod.invoke(provider, modelId, chatMessages, 0.7f, 512) as kotlinx.coroutines.flow.Flow<String>
+                    
+                    // Collect from the flow
+                    resultFlow.collect { token ->
+                        localFlow.emit(ApiState.Success(token))
+                    }
+                    localFlow.emit(ApiState.Done)
+                    
+                } catch (e: ClassNotFoundException) {
+                    localFlow.emit(ApiState.Error("Local inference module not installed. Please install it from Settings."))
+                } catch (e: java.lang.reflect.InvocationTargetException) {
+                    // Unwrap the actual exception
+                    val cause = e.cause
+                    android.util.Log.e("ChatViewModel", "Local inference error", cause)
+                    localFlow.emit(ApiState.Error("${cause?.message ?: e.message}"))
+                } catch (e: Exception) {
+                    android.util.Log.e("ChatViewModel", "Local inference error", e)
+                    localFlow.emit(ApiState.Error("Local inference failed: ${e.message}"))
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("ChatViewModel", "Local chat error", e)
+                localFlow.emit(ApiState.Error("Error: ${e.message}"))
+            }
+        }
+    }
+    
+    /**
+     * Build chat messages as List<Pair<String, String>> for local inference.
+     * Uses simple Pair class which is available in both modules.
+     */
+    private fun buildLocalChatMessages(): List<Pair<String, String>> {
+        val messages = mutableListOf<Pair<String, String>>()
+        
+        // Add history (only include non-error messages)
+        _messages.value.filter { !it.content.startsWith("Error:") }.forEach { msg ->
+            val role = if (msg.platformType == null) "user" else "assistant"
+            messages.add(Pair(role, msg.content))
+        }
+        
+        // Add current question
+        messages.add(Pair("user", _userMessage.value.content))
+        
+        return messages
+    }
 
     private suspend fun fetchMessages() {
         // If the room isn't new
@@ -413,13 +507,29 @@ class ChatViewModel @Inject constructor(
     private fun fetchEnabledPlatformsInApp() {
         viewModelScope.launch {
             val platforms = settingRepository.fetchPlatforms()
-            val enabled = platforms.filter { it.enabled }.map { it.name }
-            _enabledPlatformsInApp.update { enabled }
+            val enabledList = platforms.filter { it.enabled }.map { it.name }.toMutableList()
+            
+            // Check if LOCAL is enabled via SharedPreferences
+            val localPrefs = context.getSharedPreferences("local_ai_prefs", Context.MODE_PRIVATE)
+            val localEnabled = localPrefs.getBoolean("local_enabled", false)
+            if (localEnabled && !enabledList.contains(ApiType.LOCAL)) {
+                enabledList.add(ApiType.LOCAL)
+            }
+            
+            _enabledPlatformsInApp.update { enabledList }
             
             // Fetch current models for all enabled platforms
             platforms.filter { it.enabled }.forEach { platform ->
                 platform.model?.let { model ->
                     _currentModels.update { it + (platform.name to model) }
+                }
+            }
+            
+            // Add LOCAL model from SharedPreferences
+            if (localEnabled) {
+                val selectedModel = localPrefs.getString("selected_model_id", null)
+                selectedModel?.let {
+                    _currentModels.update { models -> models + (ApiType.LOCAL to it) }
                 }
             }
         }
@@ -501,6 +611,13 @@ class ChatViewModel @Inject constructor(
                 onLoadingComplete = { updateLoadingState(ApiType.BEDROCK, LoadingState.Idle) }
             )
         }
+        
+        viewModelScope.launch {
+            localFlow.handleStates(
+                messageFlow = _localMessage,
+                onLoadingComplete = { updateLoadingState(ApiType.LOCAL, LoadingState.Idle) }
+            )
+        }
 
         viewModelScope.launch {
             geminiNanoFlow.handleStates(
@@ -538,7 +655,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqLoadingState
             ApiType.OLLAMA -> _ollamaLoadingState
             ApiType.BEDROCK -> _bedrockLoadingState
-            ApiType.LOCAL -> _ollamaLoadingState // TODO: Add _localLoadingState
+            ApiType.LOCAL -> _localLoadingState
         }
 
         if (retryingState == LoadingState.Loading) return
@@ -551,7 +668,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqMessage.update { message }
             ApiType.OLLAMA -> _ollamaMessage.update { message }
             ApiType.BEDROCK -> _bedrockMessage.update { message }
-            ApiType.LOCAL -> _ollamaMessage.update { message } // TODO: Add _localMessage
+            ApiType.LOCAL -> _localMessage.update { message }
         }
     }
 
@@ -582,6 +699,10 @@ class ChatViewModel @Inject constructor(
         if (ApiType.BEDROCK in enabledPlatforms) {
             addMessage(_bedrockMessage.value)
         }
+        
+        if (ApiType.LOCAL in enabledPlatforms) {
+            addMessage(_localMessage.value)
+        }
     }
 
     private fun updateLoadingState(apiType: ApiType, loadingState: LoadingState) {
@@ -592,7 +713,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqLoadingState.update { loadingState }
             ApiType.OLLAMA -> _ollamaLoadingState.update { loadingState }
             ApiType.BEDROCK -> _bedrockLoadingState.update { loadingState }
-            ApiType.LOCAL -> _ollamaLoadingState.update { loadingState } // TODO: Add _localLoadingState
+            ApiType.LOCAL -> _localLoadingState.update { loadingState }
         }
 
         var result = true
@@ -604,7 +725,7 @@ class ChatViewModel @Inject constructor(
                 ApiType.GROQ -> _groqLoadingState
                 ApiType.OLLAMA -> _ollamaLoadingState
                 ApiType.BEDROCK -> _bedrockLoadingState
-                ApiType.LOCAL -> _ollamaLoadingState // TODO: Add _localLoadingState
+                ApiType.LOCAL -> _localLoadingState
             }
 
             result = result && (state.value is LoadingState.Idle)

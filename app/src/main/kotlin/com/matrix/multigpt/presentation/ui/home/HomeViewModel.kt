@@ -1,11 +1,14 @@
 package com.matrix.multigpt.presentation.ui.home
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.matrix.multigpt.data.database.entity.ChatRoom
 import com.matrix.multigpt.data.dto.Platform
+import com.matrix.multigpt.data.model.ApiType
 import com.matrix.multigpt.data.repository.ChatRepository
 import com.matrix.multigpt.data.repository.SettingRepository
 import com.matrix.multigpt.util.FirebaseEvents
@@ -19,6 +22,7 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val chatRepository: ChatRepository,
     private val settingRepository: SettingRepository,
     private val firebaseManager: FirebaseManager
@@ -135,10 +139,25 @@ class HomeViewModel @Inject constructor(
     fun fetchPlatformStatus() {
         viewModelScope.launch {
             _isPlatformsLoaded.update { false }
-            val platforms = settingRepository.fetchPlatforms()
+            val platforms = settingRepository.fetchPlatforms().toMutableList()
+            
+            // Check if LOCAL is enabled via SharedPreferences (model selected)
+            val localPrefs = context.getSharedPreferences("local_ai_prefs", Context.MODE_PRIVATE)
+            val localEnabled = localPrefs.getBoolean("local_enabled", false)
+            val selectedModelName = localPrefs.getString("selected_model_name", null)
+            
+            // Find LOCAL platform and update its enabled status
+            val localIndex = platforms.indexOfFirst { it.name == ApiType.LOCAL }
+            if (localIndex >= 0) {
+                platforms[localIndex] = platforms[localIndex].copy(enabled = localEnabled)
+            } else if (localEnabled) {
+                // Add LOCAL platform if not present but enabled
+                platforms.add(Platform(ApiType.LOCAL, enabled = true, selected = false))
+            }
+            
             _platformState.update { platforms }
             _isPlatformsLoaded.update { true }
-            Log.d("HomeViewModel", "Platforms loaded: ${platforms.filter { it.enabled }.map { it.name }}")
+            Log.d("HomeViewModel", "Platforms loaded: ${platforms.filter { it.enabled }.map { it.name }}, localEnabled=$localEnabled, model=$selectedModelName")
         }
     }
 
