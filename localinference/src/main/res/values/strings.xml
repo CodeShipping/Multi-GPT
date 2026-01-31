@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Feature Title -->
-    <string name="local_inference_title">Local AI Models</string>
+    <!-- Screen title for UI (dist:title uses base app's local_inference_title) -->
+    <string name="screen_title_local_models">Local AI Models</string>
     <string name="local_inference_subtitle">Run AI models on your device</string>
 
     <!-- Model List Screen -->
@@ -53,7 +53,7 @@
     <string name="download_loading">Loading…</string>
     <string name="download_loaded">Loaded</string>
     <string name="download_error">Error</string>
-    <string name="download_progress">%s / %s (%d%%)</string>
+    <string name="download_progress" formatted="false">%s / %s (%d%%)</string>
 
     <!-- Actions -->
     <string name="action_download">Download</string>

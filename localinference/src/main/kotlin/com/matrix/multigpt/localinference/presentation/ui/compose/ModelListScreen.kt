@@ -88,7 +88,7 @@ fun ModelListScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.local_inference_title)) },
+                title = { Text(stringResource(R.string.screen_title_local_models)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(

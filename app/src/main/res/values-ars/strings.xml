@@ -169,4 +169,5 @@
     <string name="bedrock_api_key_section_title">بيانات اعتماد مفتاح API</string>
     <string name="bedrock_api_key">مفتاح Bedrock API</string>
     <string name="bedrock_api_key_help">إنشاء من وحدة تحكم AWS Bedrock ← قسم مفاتيح API</string>
+    <string name="local_inference_title">نماذج الذكاء الاصطناعي المحلية</string>
 </resources>

@@ -169,4 +169,5 @@
     <string name="bedrock_api_key_section_title">API 키 자격증명</string>
     <string name="bedrock_api_key">Bedrock API 키</string>
     <string name="bedrock_api_key_help">AWS Bedrock 콘솔 → API 키 섹션에서 생성</string>
+    <string name="local_inference_title">Local AI Models</string>
 </resources>

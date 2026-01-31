@@ -170,4 +170,5 @@
     <string name="bedrock_api_key">Bedrock API 密钥</string>
     <string name="bedrock_api_key_help">从 AWS Bedrock 控制台 → API 密钥部分生成</string>
     <string name="export_chat">导出聊天</string>
+    <string name="local_inference_title">Local AI Models</string>
 </resources>

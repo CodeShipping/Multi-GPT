@@ -263,5 +263,5 @@
     <string name="preset_max_performance">Maximum Performance</string>
     
     <!-- Dynamic Feature Module Title (required for Play Feature Delivery) -->
-    <string name="local_inference_title">Local AI Models</string>
+    <string name="local_inference_title" translatable="false">Local AI Models</string>
 </resources>

@@ -169,4 +169,5 @@
     <string name="bedrock_api_key_section_title">Credenciais da Chave API</string>
     <string name="bedrock_api_key">Chave API Bedrock</string>
     <string name="bedrock_api_key_help">Gerar no Console AWS Bedrock → seção Chaves API</string>
+    <string name="local_inference_title">Local AI Models</string>
 </resources>
