@@ -32,7 +32,13 @@ class LocalInferenceServiceImpl @Inject constructor(
         return llamaModel != null && loadedModelInfo != null
     }
     
-    override suspend fun loadModel(modelPath: String, contextSize: Int): Result<Boolean> {
+    override suspend fun loadModel(
+        modelPath: String,
+        contextSize: Int,
+        batchSize: Int,
+        topK: Int,
+        topP: Float
+    ): Result<Boolean> {
         return withContext(Dispatchers.IO) {
             try {
                 // Unload any existing model first
@@ -51,16 +57,20 @@ class LocalInferenceServiceImpl @Inject constructor(
                 // Get available memory to determine optimal batch size
                 val runtime = java.lang.Runtime.getRuntime()
                 val maxMemory = runtime.maxMemory() / (1024 * 1024) // MB
-                val freeMemory = runtime.freeMemory() / (1024 * 1024) // MB
                 
-                // Smaller batch for low memory devices, larger for high memory
-                val optimalBatchSize = when {
-                    maxMemory > 4096 -> 1024  // High memory: max performance
-                    maxMemory > 2048 -> 512   // Medium memory
-                    else -> 256               // Low memory: safe
+                // Use user-provided batch size or auto-detect
+                val optimalBatchSize = if (batchSize > 0) {
+                    batchSize // User specified
+                } else {
+                    // Auto-detect based on memory
+                    when {
+                        maxMemory > 4096 -> 1024  // High memory: max performance
+                        maxMemory > 2048 -> 512   // Medium memory
+                        else -> 256               // Low memory: safe
+                    }
                 }
                 
-                android.util.Log.d("LocalInference", "Loading model with $threadCount threads, batch=$optimalBatchSize (cores: $availableCores, mem: ${maxMemory}MB)")
+                android.util.Log.d("LocalInference", "Loading model with $threadCount threads, batch=$optimalBatchSize, topK=$topK, topP=$topP (cores: $availableCores, mem: ${maxMemory}MB)")
                 
                 val model = LlamaModel.load(modelPath) {
                     this.contextSize = contextSize
@@ -68,8 +78,8 @@ class LocalInferenceServiceImpl @Inject constructor(
                     this.threadsBatch = threadCount
                     this.batchSize = optimalBatchSize
                     this.temperature = 0.7f
-                    this.topP = 0.9f
-                    this.topK = 40
+                    this.topP = topP
+                    this.topK = topK
                     this.useMmap = true   // Memory-mapped for faster loading
                     this.useMlock = false // Don't lock (uses too much memory)
                 }

@@ -38,6 +38,11 @@ class SettingRepositoryImpl @Inject constructor(
             ApiType.LOCAL -> settingDataSource.getSystemPrompt(ApiType.LOCAL) ?: ModelConstants.DEFAULT_PROMPT
         }
 
+        // Local AI specific settings
+        val topK = if (apiType == ApiType.LOCAL) settingDataSource.getLocalTopK() else null
+        val batchSize = if (apiType == ApiType.LOCAL) settingDataSource.getLocalBatchSize() else null
+        val contextSize = if (apiType == ApiType.LOCAL) settingDataSource.getLocalContextSize() else null
+
         Platform(
             name = apiType,
             enabled = status == true,
@@ -46,7 +51,10 @@ class SettingRepositoryImpl @Inject constructor(
             model = model,
             temperature = temperature,
             topP = topP,
-            systemPrompt = systemPrompt
+            systemPrompt = systemPrompt,
+            topK = topK,
+            batchSize = batchSize,
+            contextSize = contextSize
         )
     }
 
@@ -65,6 +73,13 @@ class SettingRepositoryImpl @Inject constructor(
             platform.temperature?.let { settingDataSource.updateTemperature(platform.name, it) }
             platform.topP?.let { settingDataSource.updateTopP(platform.name, it) }
             platform.systemPrompt?.let { settingDataSource.updateSystemPrompt(platform.name, it.trim()) }
+            
+            // Local AI specific settings
+            if (platform.name == ApiType.LOCAL) {
+                platform.topK?.let { settingDataSource.updateLocalTopK(it) }
+                platform.batchSize?.let { settingDataSource.updateLocalBatchSize(it) }
+                platform.contextSize?.let { settingDataSource.updateLocalContextSize(it) }
+            }
         }
     }
 

@@ -17,9 +17,18 @@ interface LocalInferenceService {
      * Load a model from the given path.
      * @param modelPath Path to the GGUF model file
      * @param contextSize Context size for the model (default 2048)
+     * @param batchSize Batch size for processing (0 = auto)
+     * @param topK Top K sampling parameter
+     * @param topP Top P (nucleus) sampling parameter
      * @return true if loaded successfully
      */
-    suspend fun loadModel(modelPath: String, contextSize: Int = 2048): Result<Boolean>
+    suspend fun loadModel(
+        modelPath: String,
+        contextSize: Int = 2048,
+        batchSize: Int = 0, // 0 = auto
+        topK: Int = 40,
+        topP: Float = 0.9f
+    ): Result<Boolean>
     
     /**
      * Unload the current model from memory.

@@ -365,8 +365,21 @@ fun NavGraphBuilder.settingNavigation(navController: NavHostController) {
                     // Model selected - navigate back to settings
                     // User will create new chat from home screen with LOCAL platform enabled
                     navController.navigateUp()
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Route.LOCAL_AI_SETTINGS)
                 }
             )
+        }
+        composable(Route.LOCAL_AI_SETTINGS) {
+            val parentEntry = remember(it) {
+                navController.getBackStackEntry(Route.SETTING_ROUTE)
+            }
+            val settingViewModel: SettingViewModel = hiltViewModel(parentEntry)
+            PlatformSettingScreen(
+                settingViewModel = settingViewModel,
+                apiType = ApiType.LOCAL
+            ) { navController.navigateUp() }
         }
     }
 }

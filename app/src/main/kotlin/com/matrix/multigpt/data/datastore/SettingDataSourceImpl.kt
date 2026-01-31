@@ -84,6 +84,11 @@ class SettingDataSourceImpl @Inject constructor(
     )
     private val dynamicThemeKey = intPreferencesKey("dynamic_mode")
     private val themeModeKey = intPreferencesKey("theme_mode")
+    
+    // Local AI specific keys
+    private val localTopKKey = intPreferencesKey("local_top_k")
+    private val localBatchSizeKey = intPreferencesKey("local_batch_size")
+    private val localContextSizeKey = intPreferencesKey("local_context_size")
 
     override suspend fun updateDynamicTheme(theme: DynamicTheme) {
         dataStore.edit { pref ->
@@ -218,6 +223,43 @@ class SettingDataSourceImpl @Inject constructor(
         val key = apiSystemPromptMap[apiType] ?: return null
         return dataStore.data.map { pref ->
             pref[key]
+        }.first()
+    }
+    
+    // Local AI specific settings
+    override suspend fun updateLocalTopK(topK: Int) {
+        dataStore.edit { pref ->
+            pref[localTopKKey] = topK
+        }
+    }
+    
+    override suspend fun updateLocalBatchSize(batchSize: Int) {
+        dataStore.edit { pref ->
+            pref[localBatchSizeKey] = batchSize
+        }
+    }
+    
+    override suspend fun updateLocalContextSize(contextSize: Int) {
+        dataStore.edit { pref ->
+            pref[localContextSizeKey] = contextSize
+        }
+    }
+    
+    override suspend fun getLocalTopK(): Int? {
+        return dataStore.data.map { pref ->
+            pref[localTopKKey]
+        }.first()
+    }
+    
+    override suspend fun getLocalBatchSize(): Int? {
+        return dataStore.data.map { pref ->
+            pref[localBatchSizeKey]
+        }.first()
+    }
+    
+    override suspend fun getLocalContextSize(): Int? {
+        return dataStore.data.map { pref ->
+            pref[localContextSizeKey]
         }.first()
     }
 }

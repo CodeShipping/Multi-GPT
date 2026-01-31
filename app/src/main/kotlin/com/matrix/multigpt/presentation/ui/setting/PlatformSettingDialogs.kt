@@ -696,3 +696,248 @@ private fun SystemPromptDialog(
         }
     )
 }
+
+// ==================== Local AI Specific Dialogs ====================
+
+@Composable
+fun TopKDialog(
+    dialogState: SettingViewModel.DialogState,
+    topK: Int,
+    settingViewModel: SettingViewModel
+) {
+    if (dialogState.isTopKDialogOpen) {
+        TopKDialogContent(
+            topK = topK,
+            onDismissRequest = settingViewModel::closeTopKDialog
+        ) { value ->
+            settingViewModel.updateTopK(value)
+            settingViewModel.savePlatformSettings()
+            settingViewModel.closeTopKDialog()
+        }
+    }
+}
+
+@Composable
+fun BatchSizeDialog(
+    dialogState: SettingViewModel.DialogState,
+    batchSize: Int,
+    settingViewModel: SettingViewModel
+) {
+    if (dialogState.isBatchSizeDialogOpen) {
+        BatchSizeDialogContent(
+            batchSize = batchSize,
+            onDismissRequest = settingViewModel::closeBatchSizeDialog
+        ) { value ->
+            settingViewModel.updateBatchSize(value)
+            settingViewModel.savePlatformSettings()
+            settingViewModel.closeBatchSizeDialog()
+        }
+    }
+}
+
+@Composable
+fun ContextSizeDialog(
+    dialogState: SettingViewModel.DialogState,
+    contextSize: Int,
+    settingViewModel: SettingViewModel
+) {
+    if (dialogState.isContextSizeDialogOpen) {
+        ContextSizeDialogContent(
+            contextSize = contextSize,
+            onDismissRequest = settingViewModel::closeContextSizeDialog
+        ) { value ->
+            settingViewModel.updateContextSize(value)
+            settingViewModel.savePlatformSettings()
+            settingViewModel.closeContextSizeDialog()
+        }
+    }
+}
+
+@Composable
+private fun TopKDialogContent(
+    topK: Int,
+    onDismissRequest: () -> Unit,
+    onConfirmRequest: (Int) -> Unit
+) {
+    val configuration = LocalConfiguration.current
+    var textFieldTopK by remember { mutableStateOf(topK.toString()) }
+    var sliderTopK by remember { mutableFloatStateOf(topK.toFloat()) }
+
+    AlertDialog(
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier
+            .widthIn(max = configuration.screenWidthDp.dp - 40.dp)
+            .heightIn(max = configuration.screenHeightDp.dp - 80.dp),
+        title = { Text(text = stringResource(R.string.top_k_setting)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                Text(stringResource(R.string.top_k_setting_description))
+                OutlinedTextField(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    value = textFieldTopK,
+                    onValueChange = { k ->
+                        textFieldTopK = k
+                        k.toIntOrNull()?.let {
+                            sliderTopK = it.coerceIn(1, 200).toFloat()
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    label = {
+                        Text(stringResource(R.string.top_k))
+                    }
+                )
+                Slider(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    value = sliderTopK,
+                    valueRange = 1F..200F,
+                    steps = 19, // 10, 20, 30, ..., 200
+                    onValueChange = { k ->
+                        sliderTopK = k
+                        textFieldTopK = k.roundToInt().toString()
+                    }
+                )
+            }
+        },
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirmRequest(sliderTopK.roundToInt()) }
+            ) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun BatchSizeDialogContent(
+    batchSize: Int,
+    onDismissRequest: () -> Unit,
+    onConfirmRequest: (Int) -> Unit
+) {
+    val configuration = LocalConfiguration.current
+    var selectedBatchSize by remember { mutableStateOf(batchSize) }
+    
+    val options = listOf(
+        0 to stringResource(R.string.preset_auto),
+        256 to "256 (${stringResource(R.string.preset_low_memory)})",
+        512 to "512 (${stringResource(R.string.preset_balanced)})",
+        1024 to "1024 (${stringResource(R.string.preset_max_performance)})"
+    )
+
+    AlertDialog(
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier
+            .widthIn(max = configuration.screenWidthDp.dp - 40.dp)
+            .heightIn(max = configuration.screenHeightDp.dp - 80.dp),
+        title = { Text(text = stringResource(R.string.batch_size_setting)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                Text(stringResource(R.string.batch_size_setting_description))
+                Column(
+                    modifier = Modifier.padding(top = 16.dp)
+                ) {
+                    options.forEach { (value, label) ->
+                        RadioItem(
+                            value = value.toString(),
+                            selected = selectedBatchSize == value,
+                            title = label,
+                            description = null,
+                            onSelected = { selectedBatchSize = value }
+                        )
+                    }
+                }
+            }
+        },
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirmRequest(selectedBatchSize) }
+            ) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+private fun ContextSizeDialogContent(
+    contextSize: Int,
+    onDismissRequest: () -> Unit,
+    onConfirmRequest: (Int) -> Unit
+) {
+    val configuration = LocalConfiguration.current
+    var selectedContextSize by remember { mutableStateOf(contextSize) }
+    
+    val options = listOf(
+        1024 to "1024 tokens (Fast, short conversations)",
+        2048 to "2048 tokens (Balanced - recommended)",
+        4096 to "4096 tokens (Long conversations)",
+        8192 to "8192 tokens (Maximum, complex tasks)"
+    )
+
+    AlertDialog(
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+        modifier = Modifier
+            .widthIn(max = configuration.screenWidthDp.dp - 40.dp)
+            .heightIn(max = configuration.screenHeightDp.dp - 80.dp),
+        title = { Text(text = stringResource(R.string.context_size_setting)) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                Text(stringResource(R.string.context_size_setting_description))
+                Column(
+                    modifier = Modifier.padding(top = 16.dp)
+                ) {
+                    options.forEach { (value, label) ->
+                        RadioItem(
+                            value = value.toString(),
+                            selected = selectedContextSize == value,
+                            title = label,
+                            description = null,
+                            onSelected = { selectedContextSize = value }
+                        )
+                    }
+                }
+            }
+        },
+        onDismissRequest = onDismissRequest,
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirmRequest(selectedContextSize) }
+            ) {
+                Text(stringResource(R.string.confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismissRequest
+            ) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}

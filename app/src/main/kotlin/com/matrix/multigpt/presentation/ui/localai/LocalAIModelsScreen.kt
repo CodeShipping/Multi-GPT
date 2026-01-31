@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -41,7 +42,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun LocalAIModelsScreen(
     viewModel: LocalAIModelsViewModel = hiltViewModel(),
     onNavigateBack: () -> Unit,
-    onNavigateToChat: (modelId: String, modelPath: String) -> Unit
+    onNavigateToChat: (modelId: String, modelPath: String) -> Unit,
+    onNavigateToSettings: () -> Unit = {}
 ) {
     val context = LocalContext.current
     
@@ -82,6 +84,11 @@ fun LocalAIModelsScreen(
                     }
                 },
                 actions = {
+                    IconButton(
+                        onClick = onNavigateToSettings
+                    ) {
+                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                    }
                     IconButton(
                         onClick = { viewModel.refreshModels() },
                         enabled = downloadingModels.isEmpty()

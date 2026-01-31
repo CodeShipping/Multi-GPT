@@ -165,6 +165,70 @@ class SettingViewModel @Inject constructor(
         }
     }
 
+    // Local AI specific settings
+    fun updateTopK(topK: Int) {
+        val index = _platformState.value.indexOfFirst { it.name == ApiType.LOCAL }
+        val modifiedTopK = topK.coerceIn(1, 200)
+
+        if (index >= 0) {
+            _platformState.update {
+                it.mapIndexed { i, p ->
+                    if (index == i) {
+                        p.copy(topK = modifiedTopK)
+                    } else {
+                        p
+                    }
+                }
+            }
+        }
+    }
+
+    fun updateBatchSize(batchSize: Int) {
+        val index = _platformState.value.indexOfFirst { it.name == ApiType.LOCAL }
+        // 0 = Auto, otherwise 256, 512, 1024
+        val modifiedBatchSize = when {
+            batchSize == 0 -> 0 // Auto
+            batchSize < 384 -> 256
+            batchSize < 768 -> 512
+            else -> 1024
+        }
+
+        if (index >= 0) {
+            _platformState.update {
+                it.mapIndexed { i, p ->
+                    if (index == i) {
+                        p.copy(batchSize = modifiedBatchSize)
+                    } else {
+                        p
+                    }
+                }
+            }
+        }
+    }
+
+    fun updateContextSize(contextSize: Int) {
+        val index = _platformState.value.indexOfFirst { it.name == ApiType.LOCAL }
+        // Valid values: 1024, 2048, 4096, 8192
+        val modifiedContextSize = when {
+            contextSize < 1536 -> 1024
+            contextSize < 3072 -> 2048
+            contextSize < 6144 -> 4096
+            else -> 8192
+        }
+
+        if (index >= 0) {
+            _platformState.update {
+                it.mapIndexed { i, p ->
+                    if (index == i) {
+                        p.copy(contextSize = modifiedContextSize)
+                    } else {
+                        p
+                    }
+                }
+            }
+        }
+    }
+
     fun openThemeDialog() = _dialogState.update { it.copy(isThemeDialogOpen = true) }
 
     fun openApiUrlDialog() = _dialogState.update { it.copy(isApiUrlDialogOpen = true) }
@@ -192,6 +256,14 @@ class SettingViewModel @Inject constructor(
     fun closeTopPDialog() = _dialogState.update { it.copy(isTopPDialogOpen = false) }
 
     fun closeSystemPromptDialog() = _dialogState.update { it.copy(isSystemPromptDialogOpen = false) }
+
+    // Local AI dialog functions
+    fun openTopKDialog() = _dialogState.update { it.copy(isTopKDialogOpen = true) }
+    fun openBatchSizeDialog() = _dialogState.update { it.copy(isBatchSizeDialogOpen = true) }
+    fun openContextSizeDialog() = _dialogState.update { it.copy(isContextSizeDialogOpen = true) }
+    fun closeTopKDialog() = _dialogState.update { it.copy(isTopKDialogOpen = false) }
+    fun closeBatchSizeDialog() = _dialogState.update { it.copy(isBatchSizeDialogOpen = false) }
+    fun closeContextSizeDialog() = _dialogState.update { it.copy(isContextSizeDialogOpen = false) }
 
     private fun fetchPlatformStatus() {
         viewModelScope.launch {
@@ -225,6 +297,10 @@ class SettingViewModel @Inject constructor(
         val isApiModelDialogOpen: Boolean = false,
         val isTemperatureDialogOpen: Boolean = false,
         val isTopPDialogOpen: Boolean = false,
-        val isSystemPromptDialogOpen: Boolean = false
+        val isSystemPromptDialogOpen: Boolean = false,
+        // Local AI specific dialogs
+        val isTopKDialogOpen: Boolean = false,
+        val isBatchSizeDialogOpen: Boolean = false,
+        val isContextSizeDialogOpen: Boolean = false
     )
 }

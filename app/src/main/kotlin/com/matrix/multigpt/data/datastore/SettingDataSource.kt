@@ -23,4 +23,12 @@ interface SettingDataSource {
     suspend fun getTemperature(apiType: ApiType): Float?
     suspend fun getTopP(apiType: ApiType): Float?
     suspend fun getSystemPrompt(apiType: ApiType): String?
+    
+    // Local AI specific settings
+    suspend fun updateLocalTopK(topK: Int)
+    suspend fun updateLocalBatchSize(batchSize: Int)
+    suspend fun updateLocalContextSize(contextSize: Int)
+    suspend fun getLocalTopK(): Int?
+    suspend fun getLocalBatchSize(): Int?
+    suspend fun getLocalContextSize(): Int?
 }

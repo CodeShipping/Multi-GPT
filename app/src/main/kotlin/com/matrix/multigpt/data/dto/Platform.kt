@@ -12,5 +12,9 @@ data class Platform(
     val model: String? = null,
     val temperature: Float? = null,
     val topP: Float? = null,
-    val systemPrompt: String? = null
+    val systemPrompt: String? = null,
+    // Local AI specific settings
+    val topK: Int? = null,
+    val batchSize: Int? = null,
+    val contextSize: Int? = null
 )

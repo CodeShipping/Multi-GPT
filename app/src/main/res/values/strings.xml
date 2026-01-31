@@ -241,6 +241,27 @@
     <string name="local_ai_loading_model">Loading model…</string>
     <string name="local_ai_generating">Generating response…</string>
     
+    <!-- Local AI Advanced Settings -->
+    <string name="top_k">Top K</string>
+    <string name="top_k_icon">Top K Icon</string>
+    <string name="top_k_setting">Top K Setting</string>
+    <string name="top_k_setting_description">Top K sampling limits token selection to the K most likely tokens. Lower values (10–40) make output more focused, while higher values (100+) allow more diversity. Recommended: 40 for balanced results.</string>
+    <string name="batch_size">Batch Size</string>
+    <string name="batch_size_icon">Batch Size Icon</string>
+    <string name="batch_size_setting">Batch Size Setting</string>
+    <string name="batch_size_setting_description">Batch size controls how many tokens are processed together during prefill. Higher values can speed up response time but use more memory.\n\n• Low (256): Safe for low-memory devices\n• Medium (512): Balanced performance\n• High (1024): Maximum speed on high-memory devices\n• Auto: Let the app choose based on your device</string>
+    <string name="context_size">Context Size</string>
+    <string name="context_size_icon">Context Size Icon</string>
+    <string name="context_size_setting">Context Size Setting</string>
+    <string name="context_size_setting_description">Context size determines how much conversation history the model can remember. Larger context uses more memory and may slow down responses.\n\n• 1024: Fast, short conversations\n• 2048: Balanced (recommended)\n• 4096: Long conversations\n• 8192: Maximum memory, for complex tasks</string>
+    <string name="device_performance">Device Performance</string>
+    <string name="device_performance_description">Adjust settings based on your device capabilities</string>
+    <string name="performance_preset">Performance Preset</string>
+    <string name="preset_auto">Auto (Recommended)</string>
+    <string name="preset_low_memory">Low Memory Device</string>
+    <string name="preset_balanced">Balanced</string>
+    <string name="preset_max_performance">Maximum Performance</string>
+    
     <!-- Dynamic Feature Module Title (required for Play Feature Delivery) -->
     <string name="local_inference_title">Local AI Models</string>
 </resources>

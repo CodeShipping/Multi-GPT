@@ -88,7 +88,7 @@ fun PlatformSettingScreen(
             val enabled = platform?.enabled == true
             val model = platform?.model
             val token = platform?.token
-            val temperature = platform?.temperature ?: 1F
+            val temperature = platform?.temperature ?: 0.7F
             val topP = platform?.topP
             val systemPrompt = platform?.systemPrompt ?: when (apiType) {
                 ApiType.OPENAI -> ModelConstants.OPENAI_PROMPT
@@ -99,45 +99,56 @@ fun PlatformSettingScreen(
                 ApiType.BEDROCK -> ModelConstants.DEFAULT_PROMPT
                 ApiType.LOCAL -> ModelConstants.DEFAULT_PROMPT
             }
+            
+            // Local AI specific settings
+            val topK = platform?.topK ?: 40
+            val batchSize = platform?.batchSize ?: 0 // 0 = Auto
+            val contextSize = platform?.contextSize ?: 2048
+            val isLocalAI = apiType == ApiType.LOCAL
 
             PreferenceSwitchWithContainer(
                 title = stringResource(R.string.enable_api),
                 isChecked = enabled
             ) { settingViewModel.toggleAPI(apiType) }
+            
+            // Hide API URL and API Key for Local AI
+            if (!isLocalAI) {
+                SettingItem(
+                    modifier = Modifier.height(64.dp),
+                    title = stringResource(R.string.api_url),
+                    description = url,
+                    enabled = enabled && platform?.name != ApiType.GOOGLE && platform?.name != ApiType.BEDROCK,
+                    onItemClick = settingViewModel::openApiUrlDialog,
+                    showTrailingIcon = false,
+                    showLeadingIcon = true,
+                    leadingIcon = {
+                        Icon(
+                            ImageVector.vectorResource(id = R.drawable.ic_link),
+                            contentDescription = stringResource(R.string.url_icon)
+                        )
+                    }
+                )
+                SettingItem(
+                    modifier = Modifier.height(64.dp),
+                    title = stringResource(R.string.api_key),
+                    description = token?.let { stringResource(R.string.token_set, it[0]) } ?: stringResource(R.string.token_not_set),
+                    enabled = enabled,
+                    onItemClick = settingViewModel::openApiTokenDialog,
+                    showTrailingIcon = false,
+                    showLeadingIcon = true,
+                    leadingIcon = {
+                        Icon(
+                            ImageVector.vectorResource(id = R.drawable.ic_key),
+                            contentDescription = stringResource(R.string.key_icon)
+                        )
+                    }
+                )
+            }
+            
             SettingItem(
                 modifier = Modifier.height(64.dp),
-                title = stringResource(R.string.api_url),
-                description = url,
-                enabled = enabled && platform.name != ApiType.GOOGLE && platform.name != ApiType.BEDROCK,
-                onItemClick = settingViewModel::openApiUrlDialog,
-                showTrailingIcon = false,
-                showLeadingIcon = true,
-                leadingIcon = {
-                    Icon(
-                        ImageVector.vectorResource(id = R.drawable.ic_link),
-                        contentDescription = stringResource(R.string.url_icon)
-                    )
-                }
-            )
-            SettingItem(
-                modifier = Modifier.height(64.dp),
-                title = stringResource(R.string.api_key),
-                description = token?.let { stringResource(R.string.token_set, it[0]) } ?: stringResource(R.string.token_not_set),
-                enabled = enabled,
-                onItemClick = settingViewModel::openApiTokenDialog,
-                showTrailingIcon = false,
-                showLeadingIcon = true,
-                leadingIcon = {
-                    Icon(
-                        ImageVector.vectorResource(id = R.drawable.ic_key),
-                        contentDescription = stringResource(R.string.key_icon)
-                    )
-                }
-            )
-            SettingItem(
-                modifier = Modifier.height(64.dp),
-                title = stringResource(R.string.api_model),
-                description = model,
+                title = if (isLocalAI) stringResource(R.string.local_ai_model) else stringResource(R.string.api_model),
+                description = model ?: if (isLocalAI) stringResource(R.string.local_ai_not_configured) else null,
                 enabled = enabled,
                 onItemClick = settingViewModel::openApiModelDialog,
                 showTrailingIcon = false,
@@ -179,6 +190,56 @@ fun PlatformSettingScreen(
                     )
                 }
             )
+            
+            // Local AI specific settings
+            if (isLocalAI) {
+                SettingItem(
+                    modifier = Modifier.height(64.dp),
+                    title = stringResource(R.string.top_k),
+                    description = topK.toString(),
+                    enabled = enabled,
+                    onItemClick = settingViewModel::openTopKDialog,
+                    showTrailingIcon = false,
+                    showLeadingIcon = true,
+                    leadingIcon = {
+                        Icon(
+                            ImageVector.vectorResource(id = R.drawable.ic_chart),
+                            contentDescription = stringResource(R.string.top_k_icon)
+                        )
+                    }
+                )
+                SettingItem(
+                    modifier = Modifier.height(64.dp),
+                    title = stringResource(R.string.batch_size),
+                    description = if (batchSize == 0) stringResource(R.string.preset_auto) else batchSize.toString(),
+                    enabled = enabled,
+                    onItemClick = settingViewModel::openBatchSizeDialog,
+                    showTrailingIcon = false,
+                    showLeadingIcon = true,
+                    leadingIcon = {
+                        Icon(
+                            ImageVector.vectorResource(id = R.drawable.ic_chart),
+                            contentDescription = stringResource(R.string.batch_size_icon)
+                        )
+                    }
+                )
+                SettingItem(
+                    modifier = Modifier.height(64.dp),
+                    title = stringResource(R.string.context_size),
+                    description = "$contextSize tokens",
+                    enabled = enabled,
+                    onItemClick = settingViewModel::openContextSizeDialog,
+                    showTrailingIcon = false,
+                    showLeadingIcon = true,
+                    leadingIcon = {
+                        Icon(
+                            ImageVector.vectorResource(id = R.drawable.ic_chart),
+                            contentDescription = stringResource(R.string.context_size_icon)
+                        )
+                    }
+                )
+            }
+            
             SettingItem(
                 modifier = Modifier.height(64.dp),
                 title = stringResource(R.string.system_prompt),
@@ -201,6 +262,13 @@ fun PlatformSettingScreen(
             TemperatureDialog(dialogState, apiType, temperature, settingViewModel)
             TopPDialog(dialogState, apiType, topP, settingViewModel)
             SystemPromptDialog(dialogState, apiType, systemPrompt, settingViewModel)
+            
+            // Local AI specific dialogs
+            if (isLocalAI) {
+                TopKDialog(dialogState, topK, settingViewModel)
+                BatchSizeDialog(dialogState, batchSize, settingViewModel)
+                ContextSizeDialog(dialogState, contextSize, settingViewModel)
+            }
         }
     }
 }
