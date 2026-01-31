@@ -114,13 +114,8 @@ class LocalInferenceServiceImpl @Inject constructor(
             val prefillTimeout = 60_000L // 60 seconds for prefill (first token)
             val tokenTimeout = 30_000L // 30 seconds between tokens
             
-            // Emit a "thinking" indicator after 5 seconds of waiting
-            val thinkingJob = kotlinx.coroutines.GlobalScope.launch {
-                kotlinx.coroutines.delay(5000)
-                if (tokenCount == 0 && !shouldCancel.get()) {
-                    android.util.Log.d("LocalInference", "Still processing (prefill phase)...")
-                }
-            }
+            // Log thinking status after delay (non-blocking)
+            var lastLogTime = System.currentTimeMillis()
             
             try {
                 android.util.Log.d("LocalInference", "Starting generateStream")
@@ -128,7 +123,11 @@ class LocalInferenceServiceImpl @Inject constructor(
                 // Start generation with monitoring
                 kotlinx.coroutines.withTimeoutOrNull(prefillTimeout) {
                     model.generateStream(prompt).collect { token ->
-                        thinkingJob.cancel() // Cancel thinking indicator once we get a token
+                        // Log prefill completion on first token
+                        if (tokenCount == 0) {
+                            val prefillTime = System.currentTimeMillis() - lastLogTime
+                            android.util.Log.d("LocalInference", "First token after ${prefillTime}ms")
+                        }
                         
                         if (!shouldCancel.get()) {
                             tokenCount++
@@ -142,17 +141,14 @@ class LocalInferenceServiceImpl @Inject constructor(
                     }
                 }
                 
-                thinkingJob.cancel()
                 android.util.Log.d("LocalInference", "Stream completed. Total tokens: $tokenCount")
                 
             } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-                thinkingJob.cancel()
                 android.util.Log.e("LocalInference", "Generation timed out waiting for first token")
                 if (tokenCount == 0) {
                     throw IllegalStateException("Model timed out during prefill. The model may be incompatible or too large.")
                 }
             } catch (e: Exception) {
-                thinkingJob.cancel()
                 android.util.Log.e("LocalInference", "Generate error: ${e.message}", e)
                 throw e
             }
@@ -216,14 +212,159 @@ class LocalInferenceServiceImpl @Inject constructor(
     
     /**
      * Format chat messages into a prompt string.
-     * Uses Llama 3.x Instruct format for best compatibility with Llama models.
-     * Reference: https://llama.meta.com/docs/model-cards-and-prompt-formats/llama3_2
+     * Uses the model's embedded chat template from GGUF metadata for automatic format detection.
+     * Falls back to ChatML format if no template is available or if native call fails.
      */
     private fun formatChatPrompt(messages: List<ChatMessage>): String {
+        val model = llamaModel
+        
+        // Try to use native chat template first (reads from GGUF metadata)
+        // This can fail if the model was freed (e.g., app was backgrounded)
+        if (model != null) {
+            try {
+                // First, verify the model is still valid by checking a simple property
+                // If this throws, the native context is invalid
+                val chatTemplate: String
+                try {
+                    chatTemplate = model.getChatTemplate()
+                } catch (e: Error) {
+                    // Native error - model context is invalid, clear reference
+                    android.util.Log.e("LocalInference", "Model context invalid (freed?), clearing reference", e)
+                    llamaModel = null
+                    loadedModelInfo = null
+                    throw IllegalStateException("Model was unloaded. Please reload the model.")
+                }
+                
+                android.util.Log.d("LocalInference", "Chat template available: ${chatTemplate.isNotEmpty()}")
+                
+                if (chatTemplate.isNotEmpty()) {
+                    // Convert messages to JSON format for native template application
+                    val messagesJson = buildMessagesJson(messages)
+                    android.util.Log.d("LocalInference", "Applying native chat template")
+                    
+                    val prompt: String
+                    try {
+                        prompt = model.applyChatTemplate(messagesJson, true)
+                    } catch (e: Error) {
+                        // Native error during template application
+                        android.util.Log.e("LocalInference", "Native template application crashed", e)
+                        llamaModel = null
+                        loadedModelInfo = null
+                        throw IllegalStateException("Model was unloaded. Please reload the model.")
+                    }
+                    
+                    if (prompt.isNotEmpty()) {
+                        // Validate the prompt - only reject clearly broken outputs
+                        val firstUserContent = messages.firstOrNull { it.role == ChatRole.USER }?.content?.take(30)
+                        
+                        // Only reject if user content appears directly after header marker (missing role)
+                        val isMalformed = when {
+                            firstUserContent != null && prompt.contains("<|start_header_id|>$firstUserContent") -> {
+                                android.util.Log.w("LocalInference", "Template missing role after header")
+                                true
+                            }
+                            // Template output too short (less than any meaningful response)
+                            prompt.length < 30 -> {
+                                android.util.Log.w("LocalInference", "Template output too short: ${prompt.length}")
+                                true
+                            }
+                            else -> false
+                        }
+                        
+                        if (!isMalformed) {
+                            android.util.Log.d("LocalInference", "Native template applied successfully, length: ${prompt.length}")
+                            android.util.Log.d("LocalInference", "Prompt preview: ${prompt.take(200)}")
+                            return prompt
+                        } else {
+                            android.util.Log.w("LocalInference", "Native template produced malformed output, falling back")
+                        }
+                    }
+                }
+            } catch (e: IllegalStateException) {
+                // Re-throw model unloaded errors
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("LocalInference", "Failed to apply native chat template: ${e.message}")
+                // Fall through to default format
+            }
+        }
+        
+        // Detect model type from filename and use appropriate fallback format
+        val modelName = loadedModelInfo?.modelName?.lowercase() ?: ""
+        val modelPath = loadedModelInfo?.modelPath?.lowercase() ?: ""
+        val combined = "$modelName $modelPath"
+        
+        return when {
+            combined.contains("llama-2") || combined.contains("llama2") || 
+            combined.contains("llama_2") || combined.contains("llama 2") -> {
+                android.util.Log.d("LocalInference", "Using fallback Llama 2 format")
+                formatLlama2Prompt(messages)
+            }
+            combined.contains("mistral") || combined.contains("mixtral") -> {
+                android.util.Log.d("LocalInference", "Using fallback Mistral format")
+                formatMistralPrompt(messages)
+            }
+            combined.contains("qwen") || combined.contains("yi-") -> {
+                android.util.Log.d("LocalInference", "Using fallback ChatML format")
+                formatChatMLPrompt(messages)
+            }
+            combined.contains("gemma") -> {
+                android.util.Log.d("LocalInference", "Using fallback Gemma format")
+                formatGemmaPrompt(messages)
+            }
+            combined.contains("phi") -> {
+                android.util.Log.d("LocalInference", "Using fallback Phi format")
+                formatPhiPrompt(messages)
+            }
+            else -> {
+                // ChatML is the most universal format - works with many models
+                android.util.Log.d("LocalInference", "Using fallback ChatML format (universal)")
+                formatChatMLPrompt(messages)
+            }
+        }
+    }
+    
+    /**
+     * Convert messages to JSON format for native template application.
+     */
+    private fun buildMessagesJson(messages: List<ChatMessage>): String {
+        // Add default system message if not present
+        val hasSystem = messages.any { it.role == ChatRole.SYSTEM }
+        val allMessages = if (!hasSystem) {
+            listOf(ChatMessage(ChatRole.SYSTEM, "You are a helpful AI assistant.")) + messages
+        } else {
+            messages
+        }
+        
+        return buildString {
+            append("[")
+            allMessages.forEachIndexed { index, message ->
+                if (index > 0) append(",")
+                val role = when (message.role) {
+                    ChatRole.SYSTEM -> "system"
+                    ChatRole.USER -> "user"
+                    ChatRole.ASSISTANT -> "assistant"
+                }
+                // Escape content for JSON
+                val content = message.content
+                    .replace("\\", "\\\\")
+                    .replace("\"", "\\\"")
+                    .replace("\n", "\\n")
+                    .replace("\r", "\\r")
+                    .replace("\t", "\\t")
+                append("{\"role\":\"$role\",\"content\":\"$content\"}")
+            }
+            append("]")
+        }
+    }
+    
+    /**
+     * Fallback Llama 3.x Instruct format.
+     */
+    private fun formatLlama3Prompt(messages: List<ChatMessage>): String {
         return buildString {
             append("<|begin_of_text|>")
             
-            // Check if there's a system message, otherwise add default
             val hasSystem = messages.any { it.role == ChatRole.SYSTEM }
             if (!hasSystem) {
                 append("<|start_header_id|>system<|end_header_id|>\n\n")
@@ -251,8 +392,123 @@ class LocalInferenceServiceImpl @Inject constructor(
                 }
             }
             
-            // Add the assistant prefix to prompt the model to respond
             append("<|start_header_id|>assistant<|end_header_id|>\n\n")
+        }
+    }
+    
+    /**
+     * Llama 2 Chat format.
+     */
+    private fun formatLlama2Prompt(messages: List<ChatMessage>): String {
+        return buildString {
+            val systemMessage = messages.find { it.role == ChatRole.SYSTEM }?.content 
+                ?: "You are a helpful AI assistant."
+            
+            var isFirst = true
+            for (message in messages.filter { it.role != ChatRole.SYSTEM }) {
+                when (message.role) {
+                    ChatRole.USER -> {
+                        append("[INST] ")
+                        if (isFirst) {
+                            append("<<SYS>>\n$systemMessage\n<</SYS>>\n\n")
+                            isFirst = false
+                        }
+                        append(message.content)
+                        append(" [/INST]")
+                    }
+                    ChatRole.ASSISTANT -> {
+                        append(" ")
+                        append(message.content)
+                        append(" </s><s>")
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+    
+    /**
+     * Mistral Instruct format.
+     */
+    private fun formatMistralPrompt(messages: List<ChatMessage>): String {
+        return buildString {
+            append("<s>")
+            for (message in messages) {
+                when (message.role) {
+                    ChatRole.SYSTEM, ChatRole.USER -> {
+                        append("[INST] ")
+                        append(message.content)
+                        append(" [/INST]")
+                    }
+                    ChatRole.ASSISTANT -> {
+                        append(message.content)
+                        append("</s>")
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+     * ChatML format (OpenAI/Qwen style).
+     */
+    private fun formatChatMLPrompt(messages: List<ChatMessage>): String {
+        return buildString {
+            val hasSystem = messages.any { it.role == ChatRole.SYSTEM }
+            if (!hasSystem) {
+                append("<|im_start|>system\nYou are a helpful AI assistant.<|im_end|>\n")
+            }
+            for (message in messages) {
+                val role = when (message.role) {
+                    ChatRole.SYSTEM -> "system"
+                    ChatRole.USER -> "user"
+                    ChatRole.ASSISTANT -> "assistant"
+                }
+                append("<|im_start|>$role\n${message.content}<|im_end|>\n")
+            }
+            append("<|im_start|>assistant\n")
+        }
+    }
+    
+    /**
+     * Gemma format.
+     */
+    private fun formatGemmaPrompt(messages: List<ChatMessage>): String {
+        return buildString {
+            append("<bos>")
+            for (message in messages) {
+                when (message.role) {
+                    ChatRole.USER -> {
+                        append("<start_of_turn>user\n${message.content}<end_of_turn>\n")
+                    }
+                    ChatRole.ASSISTANT -> {
+                        append("<start_of_turn>model\n${message.content}<end_of_turn>\n")
+                    }
+                    ChatRole.SYSTEM -> {
+                        // Gemma doesn't have explicit system
+                    }
+                }
+            }
+            append("<start_of_turn>model\n")
+        }
+    }
+    
+    /**
+     * Phi format (Microsoft).
+     */
+    private fun formatPhiPrompt(messages: List<ChatMessage>): String {
+        return buildString {
+            val systemMessage = messages.find { it.role == ChatRole.SYSTEM }?.content 
+                ?: "You are a helpful AI assistant."
+            append("<|system|>\n$systemMessage<|end|>\n")
+            for (message in messages.filter { it.role != ChatRole.SYSTEM }) {
+                when (message.role) {
+                    ChatRole.USER -> append("<|user|>\n${message.content}<|end|>\n")
+                    ChatRole.ASSISTANT -> append("<|assistant|>\n${message.content}<|end|>\n")
+                    else -> {}
+                }
+            }
+            append("<|assistant|>\n")
         }
     }
 }

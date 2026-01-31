@@ -284,73 +284,46 @@ class ModelFetchServiceImpl @Inject constructor(
     private suspend fun fetchLocalModels(): ModelFetchResult {
         // Check which models are downloaded by looking in the models directory
         val modelsDir = File(context.filesDir, "models")
-        val downloadedFiles = if (modelsDir.exists()) {
-            modelsDir.listFiles()?.map { it.name.removeSuffix(".gguf") }?.toSet() ?: emptySet()
+        val downloadedFilesMap = if (modelsDir.exists()) {
+            modelsDir.listFiles()
+                ?.filter { it.isFile && it.extension.lowercase() == "gguf" }
+                ?.associate { it.nameWithoutExtension to it.absolutePath }
+                ?: emptyMap()
         } else {
-            emptySet()
+            emptyMap()
         }
+        val downloadedFiles = downloadedFilesMap.keys
         
-        // Load imported models from SharedPreferences
-        val importedModels = loadImportedModels(modelsDir)
+        android.util.Log.d("ModelFetchService", "Downloaded GGUF files: $downloadedFiles")
         
-        // Define available models with their file names
-        data class LocalModelDef(
-            val id: String,
-            val name: String,
-            val description: String,
-            val fileName: String
-        )
+        // Load imported models from SharedPreferences AND also detect any unregistered imported models
+        val registeredImported = loadImportedModels(modelsDir)
         
-        val availableModels = listOf(
-            LocalModelDef(
-                id = "llama-3.2-1b-q4",
-                name = "Llama 3.2 1B (Q4)",
-                description = "Fast, lightweight model (~700MB) - Best for basic tasks",
-                fileName = "llama-3.2-1b-q4"
-            ),
-            LocalModelDef(
-                id = "llama-3.2-3b-q4",
-                name = "Llama 3.2 3B (Q4)",
-                description = "Balanced model (~1.8GB) - Good quality and speed",
-                fileName = "llama-3.2-3b-q4"
-            ),
-            LocalModelDef(
-                id = "phi-3-mini-q4",
-                name = "Phi 3 Mini (Q4)",
-                description = "Microsoft's efficient model (~2.3GB) - Great for coding",
-                fileName = "phi-3-mini-q4"
-            ),
-            LocalModelDef(
-                id = "gemma-2b-q4",
-                name = "Gemma 2B (Q4)",
-                description = "Google's compact model (~1.5GB) - General purpose",
-                fileName = "gemma-2b-q4"
-            ),
-            LocalModelDef(
-                id = "qwen2-1.5b-q4",
-                name = "Qwen2 1.5B (Q4)",
-                description = "Alibaba's multilingual model (~1GB) - Good for multiple languages",
-                fileName = "qwen2-1.5b-q4"
-            ),
-            LocalModelDef(
-                id = "tinyllama-1.1b-q4",
-                name = "TinyLlama 1.1B (Q4)",
-                description = "Smallest model (~640MB) - Fastest inference",
-                fileName = "tinyllama-1.1b-q4"
-            )
-        )
-        
-        // Map to ModelInfo with isAvailable based on download status
-        val catalogModels = availableModels.map { model ->
-            val isDownloaded = downloadedFiles.contains(model.fileName) || 
-                               downloadedFiles.contains(model.id)
+        // Also detect any GGUF files that start with "imported-" but aren't in SharedPreferences
+        val unregisteredImported = downloadedFilesMap.filter { (name, _) -> 
+            name.startsWith("imported-") && registeredImported.none { it.id == name }
+        }.map { (name, path) ->
+            val file = File(path)
             ModelInfo(
-                id = model.id,
-                name = model.name,
-                description = if (isDownloaded) model.description else "${model.description} [NOT DOWNLOADED]",
-                isAvailable = isDownloaded
+                id = name,
+                name = "Imported Model ($name)",
+                description = "[Imported] Size: ${formatSize(file.length())}",
+                isAvailable = true
             )
         }
+        
+        val importedModels = registeredImported + unregisteredImported
+        android.util.Log.d("ModelFetchService", "All imported models: ${importedModels.map { it.id }}")
+        
+        // Try to fetch catalog from localinference module (Firebase-sourced)
+        val catalogModels = try {
+            fetchCatalogFromLocalInferenceModule(downloadedFiles)
+        } catch (e: Exception) {
+            android.util.Log.w("ModelFetchService", "Failed to fetch from localinference module: ${e.message}")
+            emptyList()
+        }
+        
+        android.util.Log.d("ModelFetchService", "Catalog models from Firebase: ${catalogModels.map { it.id }}")
         
         // Combine: imported models first (they're always available), then catalog models
         val allModels = importedModels + catalogModels.filter { catalog ->
@@ -361,6 +334,70 @@ class ModelFetchServiceImpl @Inject constructor(
         val sortedModels = allModels.sortedByDescending { it.isAvailable }
         
         return ModelFetchResult.Success(sortedModels)
+    }
+    
+    /**
+     * Fetch model catalog from localinference module using reflection.
+     * This ensures we use the same Firebase-sourced catalog as the Local AI settings screen.
+     */
+    private suspend fun fetchCatalogFromLocalInferenceModule(downloadedFiles: Set<String>): List<ModelInfo> {
+        return try {
+            // Get LocalInferenceProvider instance via reflection
+            val providerClass = Class.forName("com.matrix.multigpt.localinference.LocalInferenceProvider")
+            val companionField = providerClass.getDeclaredField("Companion")
+            val companion = companionField.get(null)
+            val getInstanceMethod = companion.javaClass.getMethod("getInstance", Context::class.java)
+            val provider = getInstanceMethod.invoke(companion, context)!!
+            
+            // Get modelRepository
+            val repoMethod = provider.javaClass.getDeclaredMethod("getModelRepository")
+            val repository = repoMethod.invoke(provider)
+            
+            // Call getModels() - suspend function via continuation
+            val getModelsMethod = repository.javaClass.getDeclaredMethod("getModels", kotlin.coroutines.Continuation::class.java)
+            
+            @Suppress("UNCHECKED_CAST")
+            val models = invokeSuspend<List<Any>>(getModelsMethod, repository)
+            
+            // Convert to ModelInfo
+            models.mapNotNull { model ->
+                try {
+                    val modelClass = model.javaClass
+                    val id = modelClass.getMethod("getId").invoke(model) as String
+                    val name = modelClass.getMethod("getName").invoke(model) as String
+                    val description = modelClass.getMethod("getDescription").invoke(model) as String
+                    val isDownloaded = downloadedFiles.contains(id)
+                    
+                    ModelInfo(
+                        id = id,
+                        name = name,
+                        description = if (isDownloaded) description else "$description [NOT DOWNLOADED]",
+                        isAvailable = isDownloaded
+                    )
+                } catch (e: Exception) {
+                    android.util.Log.w("ModelFetchService", "Failed to parse model: ${e.message}")
+                    null
+                }
+            }
+        } catch (e: ClassNotFoundException) {
+            android.util.Log.w("ModelFetchService", "localinference module not available")
+            emptyList()
+        }
+    }
+    
+    @Suppress("UNCHECKED_CAST")
+    private suspend fun <T> invokeSuspend(method: java.lang.reflect.Method, obj: Any, vararg args: Any?): T {
+        return kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+            try {
+                val allArgs = args.toMutableList().apply { add(cont) }.toTypedArray()
+                val result = method.invoke(obj, *allArgs)
+                if (result != null && result.javaClass.name != "kotlin.coroutines.intrinsics.CoroutineSingletons") {
+                    cont.resumeWith(Result.success(result as T))
+                }
+            } catch (e: Exception) {
+                cont.resumeWith(Result.failure(e))
+            }
+        }
     }
     
     /**

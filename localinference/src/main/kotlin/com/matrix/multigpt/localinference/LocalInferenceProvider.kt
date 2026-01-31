@@ -193,19 +193,27 @@ class LocalInferenceProvider private constructor(context: Context) {
         android.util.Log.d("LocalProvider", "Model path: $modelPath")
         
         // Load model if not already loaded or if different model
-        val loadedModelId = inferenceService.getLoadedModelId()
+        var loadedModelId = inferenceService.getLoadedModelId()
         android.util.Log.d("LocalProvider", "Currently loaded model: $loadedModelId")
         
-        if (loadedModelId != modelId) {
-            android.util.Log.d("LocalProvider", "Loading new model...")
-            val result = inferenceService.loadModel(modelPath)
-            if (result.isFailure) {
-                val error = result.exceptionOrNull() ?: Exception("Failed to load model")
-                android.util.Log.e("LocalProvider", "Model load failed", error)
-                throw error
+        // Always try to ensure model is loaded - it may have been freed if app was backgrounded
+        suspend fun ensureModelLoaded(): Boolean {
+            loadedModelId = inferenceService.getLoadedModelId()
+            if (loadedModelId != modelId || !inferenceService.isModelLoaded()) {
+                android.util.Log.d("LocalProvider", "Loading/reloading model...")
+                val result = inferenceService.loadModel(modelPath)
+                if (result.isFailure) {
+                    val error = result.exceptionOrNull() ?: Exception("Failed to load model")
+                    android.util.Log.e("LocalProvider", "Model load failed", error)
+                    throw error
+                }
+                android.util.Log.d("LocalProvider", "Model loaded successfully")
+                return true
             }
-            android.util.Log.d("LocalProvider", "Model loaded successfully")
+            return false
         }
+        
+        ensureModelLoaded()
         
         // Limit messages to last few to reduce prompt size
         val limitedMessages = if (messages.size > 6) {
@@ -233,6 +241,7 @@ class LocalInferenceProvider private constructor(context: Context) {
         
         // First, try synchronous generation (more reliable on some models)
         android.util.Log.d("LocalProvider", "Trying synchronous generation first...")
+        var retried = false
         try {
             val syncResult = kotlinx.coroutines.withTimeoutOrNull(90_000L) {
                 inferenceService.generateChatCompletionSync(chatMessages, temperature, maxTokens)
@@ -250,9 +259,39 @@ class LocalInferenceProvider private constructor(context: Context) {
                     hasEmittedToken = true
                 }
             } else if (syncResult?.isFailure == true) {
-                android.util.Log.e("LocalProvider", "Sync generation failed", syncResult.exceptionOrNull())
+                val ex = syncResult.exceptionOrNull()
+                android.util.Log.e("LocalProvider", "Sync generation failed", ex)
+                // Check if model was unloaded and retry
+                if (ex?.message?.contains("unloaded", ignoreCase = true) == true || 
+                    ex?.message?.contains("not loaded", ignoreCase = true) == true) {
+                    android.util.Log.w("LocalProvider", "Model was unloaded, reloading and retrying...")
+                    ensureModelLoaded()
+                    retried = true
+                    val retryResult = kotlinx.coroutines.withTimeoutOrNull(90_000L) {
+                        inferenceService.generateChatCompletionSync(chatMessages, temperature, maxTokens)
+                    }
+                    if (retryResult?.isSuccess == true) {
+                        val response = retryResult.getOrNull()
+                        if (!response.isNullOrBlank()) {
+                            android.util.Log.d("LocalProvider", "Retry sync generation succeeded")
+                            response.chunked(1).forEach { char ->
+                                emit(char)
+                                kotlinx.coroutines.delay(1)
+                            }
+                            hasEmittedToken = true
+                        }
+                    }
+                }
             } else {
                 android.util.Log.w("LocalProvider", "Sync generation timed out")
+            }
+        } catch (e: IllegalStateException) {
+            android.util.Log.e("LocalProvider", "Sync generation state exception", e)
+            // Try to reload model and retry once
+            if (!retried && (e.message?.contains("unloaded", ignoreCase = true) == true ||
+                            e.message?.contains("not loaded", ignoreCase = true) == true)) {
+                android.util.Log.w("LocalProvider", "Model was unloaded, reloading...")
+                ensureModelLoaded()
             }
         } catch (e: Exception) {
             android.util.Log.e("LocalProvider", "Sync generation exception", e)
