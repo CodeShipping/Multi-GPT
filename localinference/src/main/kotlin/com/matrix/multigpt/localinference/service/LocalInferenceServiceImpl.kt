@@ -43,13 +43,35 @@ class LocalInferenceServiceImpl @Inject constructor(
                     return@withContext Result.failure(IllegalArgumentException("Model file not found: $modelPath"))
                 }
                 
-                // Load the model with optimized settings
+                // Load the model with performance-optimized settings
+                val availableCores = Runtime.getRuntime().availableProcessors()
+                // Use all available cores for best performance
+                val threadCount = availableCores.coerceIn(2, 16)
+                
+                // Get available memory to determine optimal batch size
+                val runtime = java.lang.Runtime.getRuntime()
+                val maxMemory = runtime.maxMemory() / (1024 * 1024) // MB
+                val freeMemory = runtime.freeMemory() / (1024 * 1024) // MB
+                
+                // Smaller batch for low memory devices, larger for high memory
+                val optimalBatchSize = when {
+                    maxMemory > 4096 -> 1024  // High memory: max performance
+                    maxMemory > 2048 -> 512   // Medium memory
+                    else -> 256               // Low memory: safe
+                }
+                
+                android.util.Log.d("LocalInference", "Loading model with $threadCount threads, batch=$optimalBatchSize (cores: $availableCores, mem: ${maxMemory}MB)")
+                
                 val model = LlamaModel.load(modelPath) {
                     this.contextSize = contextSize
-                    this.threads = Runtime.getRuntime().availableProcessors().coerceIn(2, 8) // Use multiple CPU cores
+                    this.threads = threadCount
+                    this.threadsBatch = threadCount
+                    this.batchSize = optimalBatchSize
                     this.temperature = 0.7f
                     this.topP = 0.9f
                     this.topK = 40
+                    this.useMmap = true   // Memory-mapped for faster loading
+                    this.useMlock = false // Don't lock (uses too much memory)
                 }
                 
                 llamaModel = model
