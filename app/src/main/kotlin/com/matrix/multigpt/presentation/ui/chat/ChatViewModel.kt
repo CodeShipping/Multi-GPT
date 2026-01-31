@@ -1,6 +1,7 @@
 package com.matrix.multigpt.presentation.ui.chat
 
 import android.content.Context
+import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -57,9 +58,16 @@ class ChatViewModel @Inject constructor(
     private val _enabledPlatformsInApp = MutableStateFlow(listOf<ApiType>())
     val enabledPlatformsInApp = _enabledPlatformsInApp.asStateFlow()
     
-    // Model selection state
+    // Model selection state - single active model across all providers
     private val _currentModels = MutableStateFlow<Map<ApiType, String>>(emptyMap())
     val currentModels = _currentModels.asStateFlow()
+    
+    // Currently active provider and model (single selection)
+    private val _activeProvider = MutableStateFlow<ApiType?>(null)
+    val activeProvider = _activeProvider.asStateFlow()
+    
+    private val _activeModel = MutableStateFlow<String?>(null)
+    val activeModel = _activeModel.asStateFlow()
     
     private val _fetchedModels = MutableStateFlow<Map<ApiType, List<ModelInfo>>>(emptyMap())
     val fetchedModels = _fetchedModels.asStateFlow()
@@ -154,18 +162,65 @@ class ChatViewModel @Inject constructor(
 
     init {
         if (com.matrix.multigpt.BuildConfig.DEBUG) {
-            android.util.Log.d("ViewModel", "$chatRoomId")
-            android.util.Log.d("ViewModel", "$enabledPlatformsInChat")
+            Log.d("ViewModel", "$chatRoomId")
+            Log.d("ViewModel", "$enabledPlatformsInChat")
         }
         fetchChatRoom()
         viewModelScope.launch { fetchMessages() }
         fetchEnabledPlatformsInApp()
         observeFlow()
     }
+    
+    override fun onCleared() {
+        super.onCleared()
+        // Cancel local inference if in progress
+        cancelLocalInference()
+    }
+    
+    private fun cancelLocalInference() {
+        try {
+            val providerClass = Class.forName("com.matrix.multigpt.localinference.LocalInferenceProvider")
+            val companionField = providerClass.getDeclaredField("Companion")
+            val companion = companionField.get(null)
+            val getInstanceMethod = companion.javaClass.getMethod("getInstance", Context::class.java)
+            val provider = getInstanceMethod.invoke(companion, context)
+            
+            // Call cancelGeneration() which waits for completion
+            val cancelMethod = provider.javaClass.getMethod("cancelGeneration")
+            cancelMethod.invoke(provider)
+            
+            if (com.matrix.multigpt.BuildConfig.DEBUG) {
+                Log.d("ChatViewModel", "Local inference cancelled")
+            }
+        } catch (e: Exception) {
+            // Ignore - method might not exist or provider not loaded
+            if (com.matrix.multigpt.BuildConfig.DEBUG) {
+                Log.d("ChatViewModel", "Cancel inference: ${e.message}")
+            }
+        }
+    }
+    
+    /**
+     * Check if local inference is currently generating.
+     */
+    private fun isLocalInferenceGenerating(): Boolean {
+        return try {
+            val providerClass = Class.forName("com.matrix.multigpt.localinference.LocalInferenceProvider")
+            val companionField = providerClass.getDeclaredField("Companion")
+            val companion = companionField.get(null)
+            val getInstanceMethod = companion.javaClass.getMethod("getInstance", Context::class.java)
+            val provider = getInstanceMethod.invoke(companion, context)
+            
+            val isGeneratingMethod = provider.javaClass.getMethod("isGenerating")
+            isGeneratingMethod.invoke(provider) as Boolean
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     fun askQuestion() {
         if (com.matrix.multigpt.BuildConfig.DEBUG) {
-            android.util.Log.d("Question: ", _question.value)
+            Log.d("Question: ", _question.value)
         }
         _userMessage.update { it.copy(content = _question.value, createdAt = currentTimeStamp) }
         _question.update { "" }
@@ -315,42 +370,47 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun completeChat() {
-        enabledPlatformsInChat.forEach { apiType -> updateLoadingState(apiType, LoadingState.Loading) }
-        val enabledPlatforms = enabledPlatformsInChat.toSet()
-
-        if (ApiType.OPENAI in enabledPlatforms) {
-            _openAIMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.OPENAI]) }
-            completeOpenAIChat()
-        }
-
-        if (ApiType.ANTHROPIC in enabledPlatforms) {
-            _anthropicMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.ANTHROPIC]) }
-            completeAnthropicChat()
-        }
-
-        if (ApiType.GOOGLE in enabledPlatforms) {
-            _googleMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.GOOGLE]) }
-            completeGoogleChat()
-        }
-
-        if (ApiType.GROQ in enabledPlatforms) {
-            _groqMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.GROQ]) }
-            completeGroqChat()
-        }
-
-        if (ApiType.OLLAMA in enabledPlatforms) {
-            _ollamaMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.OLLAMA]) }
-            completeOllamaChat()
-        }
-
-        if (ApiType.BEDROCK in enabledPlatforms) {
-            _bedrockMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.BEDROCK]) }
-            completeBedrockChat()
+        // Only use the active provider (single model selection)
+        val activeApiType = _activeProvider.value ?: enabledPlatformsInChat.firstOrNull()
+        
+        if (activeApiType == null) {
+            // Fallback to old behavior if no active provider
+            enabledPlatformsInChat.forEach { apiType -> updateLoadingState(apiType, LoadingState.Loading) }
+            return
         }
         
-        if (ApiType.LOCAL in enabledPlatforms) {
-            _localMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.LOCAL]) }
-            completeLocalChat()
+        // Only set loading for the active provider
+        updateLoadingState(activeApiType, LoadingState.Loading)
+        
+        when (activeApiType) {
+            ApiType.OPENAI -> {
+                _openAIMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.OPENAI]) }
+                completeOpenAIChat()
+            }
+            ApiType.ANTHROPIC -> {
+                _anthropicMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.ANTHROPIC]) }
+                completeAnthropicChat()
+            }
+            ApiType.GOOGLE -> {
+                _googleMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.GOOGLE]) }
+                completeGoogleChat()
+            }
+            ApiType.GROQ -> {
+                _groqMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.GROQ]) }
+                completeGroqChat()
+            }
+            ApiType.OLLAMA -> {
+                _ollamaMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.OLLAMA]) }
+                completeOllamaChat()
+            }
+            ApiType.BEDROCK -> {
+                _bedrockMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.BEDROCK]) }
+                completeBedrockChat()
+            }
+            ApiType.LOCAL -> {
+                _localMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.LOCAL]) }
+                completeLocalChat()
+            }
         }
     }
 
@@ -442,14 +502,14 @@ class ChatViewModel @Inject constructor(
                 } catch (e: java.lang.reflect.InvocationTargetException) {
                     // Unwrap the actual exception
                     val cause = e.cause
-                    android.util.Log.e("ChatViewModel", "Local inference error", cause)
+                    Log.e("ChatViewModel", "Local inference error", cause)
                     localFlow.emit(ApiState.Error("${cause?.message ?: e.message}"))
                 } catch (e: Exception) {
-                    android.util.Log.e("ChatViewModel", "Local inference error", e)
+                    Log.e("ChatViewModel", "Local inference error", e)
                     localFlow.emit(ApiState.Error("Local inference failed: ${e.message}"))
                 }
             } catch (e: Exception) {
-                android.util.Log.e("ChatViewModel", "Local chat error", e)
+                Log.e("ChatViewModel", "Local chat error", e)
                 localFlow.emit(ApiState.Error("Error: ${e.message}"))
             }
         }
@@ -499,7 +559,7 @@ class ChatViewModel @Inject constructor(
                 }
             }
             if (com.matrix.multigpt.BuildConfig.DEBUG) {
-                android.util.Log.d("ViewModel", "chatroom: $chatRoom")
+                Log.d("ViewModel", "chatroom: $chatRoom")
             }
         }
     }
@@ -518,7 +578,27 @@ class ChatViewModel @Inject constructor(
             
             _enabledPlatformsInApp.update { enabledList }
             
-            // Fetch current models for all enabled platforms
+            // Load persisted active provider
+            val appPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            val savedActiveProvider = appPrefs.getString("active_provider", null)
+            val savedActiveModel = appPrefs.getString("active_model", null)
+            
+            if (savedActiveProvider != null && savedActiveModel != null) {
+                try {
+                    val apiType = ApiType.valueOf(savedActiveProvider)
+                    // Only use saved provider if it's still enabled
+                    if (apiType in enabledList || (apiType == ApiType.LOCAL && localEnabled)) {
+                        _activeProvider.update { apiType }
+                        _activeModel.update { savedActiveModel }
+                        _currentModels.update { mapOf(apiType to savedActiveModel) }
+                        return@launch
+                    }
+                } catch (e: IllegalArgumentException) {
+                    // Invalid provider name, ignore
+                }
+            }
+            
+            // Fallback: load from platform settings (legacy behavior)
             platforms.filter { it.enabled }.forEach { platform ->
                 platform.model?.let { model ->
                     _currentModels.update { it + (platform.name to model) }
@@ -556,16 +636,37 @@ class ChatViewModel @Inject constructor(
     
     fun updateSelectedModel(apiType: ApiType, model: String) {
         viewModelScope.launch {
-            val platforms = settingRepository.fetchPlatforms()
-            val updatedPlatforms = platforms.map { platform ->
-                if (platform.name == apiType) {
-                    platform.copy(model = model)
-                } else {
-                    platform
+            // Set single active provider and model
+            _activeProvider.update { apiType }
+            _activeModel.update { model }
+            
+            // Clear all other providers' models, set only the selected one
+            _currentModels.update { mapOf(apiType to model) }
+            
+            // Persist active provider and model to SharedPreferences
+            val appPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+            appPrefs.edit()
+                .putString("active_provider", apiType.name)
+                .putString("active_model", model)
+                .apply()
+            
+            if (apiType == ApiType.LOCAL) {
+                // LOCAL models are stored in SharedPreferences
+                val localPrefs = context.getSharedPreferences("local_ai_prefs", Context.MODE_PRIVATE)
+                localPrefs.edit().putString("selected_model_id", model).apply()
+            } else {
+                // Other providers are stored in settingRepository
+                val platforms = settingRepository.fetchPlatforms()
+                val updatedPlatforms = platforms.map { platform ->
+                    if (platform.name == apiType) {
+                        platform.copy(model = model)
+                    } else {
+                        // Clear model for other providers
+                        platform.copy(model = null)
+                    }
                 }
+                settingRepository.updatePlatforms(updatedPlatforms)
             }
-            settingRepository.updatePlatforms(updatedPlatforms)
-            _currentModels.update { it + (apiType to model) }
         }
     }
 
@@ -630,12 +731,12 @@ class ChatViewModel @Inject constructor(
             _isIdle.collect { status ->
                 if (status) {
                     if (com.matrix.multigpt.BuildConfig.DEBUG) {
-                        android.util.Log.d("status", "val: ${_userMessage.value}")
+                        Log.d("status", "val: ${_userMessage.value}")
                     }
                     if (_chatRoom.value.id != -1 && _userMessage.value.content.isNotBlank()) {
                         syncQuestionAndAnswers()
                         if (com.matrix.multigpt.BuildConfig.DEBUG) {
-                            android.util.Log.d("message", "${_messages.value}")
+                            Log.d("message", "${_messages.value}")
                         }
                         _chatRoom.update { chatRepository.saveChat(_chatRoom.value, _messages.value) }
                         fetchMessages() // For syncing message ids
@@ -674,34 +775,22 @@ class ChatViewModel @Inject constructor(
 
     private fun syncQuestionAndAnswers() {
         addMessage(_userMessage.value)
-        val enabledPlatforms = enabledPlatformsInChat.toSet()
-
-        if (ApiType.OPENAI in enabledPlatforms) {
-            addMessage(_openAIMessage.value)
-        }
-
-        if (ApiType.ANTHROPIC in enabledPlatforms) {
-            addMessage(_anthropicMessage.value)
-        }
-
-        if (ApiType.GOOGLE in enabledPlatforms) {
-            addMessage(_googleMessage.value)
-        }
-
-        if (ApiType.GROQ in enabledPlatforms) {
-            addMessage(_groqMessage.value)
-        }
-
-        if (ApiType.OLLAMA in enabledPlatforms) {
-            addMessage(_ollamaMessage.value)
-        }
-
-        if (ApiType.BEDROCK in enabledPlatforms) {
-            addMessage(_bedrockMessage.value)
+        
+        // Only sync the active provider's response
+        val activeApiType = _activeProvider.value ?: return
+        
+        val message = when (activeApiType) {
+            ApiType.OPENAI -> _openAIMessage.value
+            ApiType.ANTHROPIC -> _anthropicMessage.value
+            ApiType.GOOGLE -> _googleMessage.value
+            ApiType.GROQ -> _groqMessage.value
+            ApiType.OLLAMA -> _ollamaMessage.value
+            ApiType.BEDROCK -> _bedrockMessage.value
+            ApiType.LOCAL -> _localMessage.value
         }
         
-        if (ApiType.LOCAL in enabledPlatforms) {
-            addMessage(_localMessage.value)
+        if (message.content.isNotEmpty()) {
+            addMessage(message)
         }
     }
 
@@ -716,21 +805,18 @@ class ChatViewModel @Inject constructor(
             ApiType.LOCAL -> _localLoadingState.update { loadingState }
         }
 
-        var result = true
-        enabledPlatformsInChat.forEach {
-            val state = when (it) {
-                ApiType.OPENAI -> _openaiLoadingState
-                ApiType.ANTHROPIC -> _anthropicLoadingState
-                ApiType.GOOGLE -> _googleLoadingState
-                ApiType.GROQ -> _groqLoadingState
-                ApiType.OLLAMA -> _ollamaLoadingState
-                ApiType.BEDROCK -> _bedrockLoadingState
-                ApiType.LOCAL -> _localLoadingState
-            }
-
-            result = result && (state.value is LoadingState.Idle)
+        // Only check active provider's loading state
+        val activeApiType = _activeProvider.value ?: apiType
+        val activeState = when (activeApiType) {
+            ApiType.OPENAI -> _openaiLoadingState
+            ApiType.ANTHROPIC -> _anthropicLoadingState
+            ApiType.GOOGLE -> _googleLoadingState
+            ApiType.GROQ -> _groqLoadingState
+            ApiType.OLLAMA -> _ollamaLoadingState
+            ApiType.BEDROCK -> _bedrockLoadingState
+            ApiType.LOCAL -> _localLoadingState
         }
 
-        _isIdle.update { result }
+        _isIdle.update { activeState.value is LoadingState.Idle }
     }
 }

@@ -139,17 +139,38 @@ fun HomeScreen(
                 enabled = true, // Always enabled, but shows toast if no platforms configured
                 onClick = {
                     if (!isPlatformsLoaded) return@NewChatButton
-                    val enabledApiTypes = platformState.filter { it.enabled }.map { it.name }
+                    
+                    // Build list of enabled providers including LOCAL from SharedPreferences
+                    val enabledApiTypes = platformState.filter { it.enabled }.map { it.name }.toMutableList()
+                    val localPrefs = context.getSharedPreferences("local_ai_prefs", android.content.Context.MODE_PRIVATE)
+                    val localEnabled = localPrefs.getBoolean("local_enabled", false)
+                    if (localEnabled && !enabledApiTypes.contains(ApiType.LOCAL)) {
+                        enabledApiTypes.add(ApiType.LOCAL)
+                    }
+                    
                     if (enabledApiTypes.isEmpty()) {
                         Toast.makeText(context, context.getString(R.string.enable_at_leat_one_platform), Toast.LENGTH_LONG).show()
                         return@NewChatButton
                     }
-                    if (enabledApiTypes.size == 1) {
-                        // Navigate to new chat directly if only one platform is enabled
-                        navigateToNewChat(enabledApiTypes)
+                    
+                    // Get the active provider from SharedPreferences (set by model dropdown)
+                    val appPrefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                    val activeProvider = appPrefs.getString("active_provider", null)
+                    
+                    val activeApiType = if (activeProvider != null) {
+                        try {
+                            val apiType = ApiType.valueOf(activeProvider)
+                            // Use active provider if it's enabled
+                            if (apiType in enabledApiTypes) apiType else enabledApiTypes.first()
+                        } catch (e: IllegalArgumentException) {
+                            enabledApiTypes.first()
+                        }
                     } else {
-                        homeViewModel.openSelectModelDialog()
+                        enabledApiTypes.first()
                     }
+                    
+                    // Navigate directly with the active provider
+                    navigateToNewChat(listOf(activeApiType))
                 }
             )
         },

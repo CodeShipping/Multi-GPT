@@ -494,10 +494,11 @@ private fun ChatTopBar(
     var isModelDropdownExpanded by remember { mutableStateOf(false) }
     var selectedProvider by remember { mutableStateOf<ApiType?>(null) }
     
-    // Get current model and provider for display
-    val firstProvider = enabledProviders.firstOrNull()
-    val currentModel = firstProvider?.let { currentModels[it] } ?: "Select Model"
-    val currentProviderName = firstProvider?.name ?: ""
+    // Get current model and provider for display - show the first configured model
+    val firstConfiguredProvider = enabledProviders.firstOrNull { currentModels[it] != null }
+        ?: enabledProviders.firstOrNull()
+    val currentModel = firstConfiguredProvider?.let { currentModels[it] } ?: "Select Model"
+    val currentProviderName = firstConfiguredProvider?.name ?: ""
     
     // Fetch models when provider is selected
     LaunchedEffect(selectedProvider) {
@@ -676,25 +677,47 @@ private fun ChatTopBar(
                                     )
                                 } else {
                                     models.forEach { modelInfo ->
-                                        val isSelected = currentModels[selectedProvider] == modelInfo.id
+                                        // Check if THIS model is the currently active one (single selection across all providers)
+                                        val isActiveModel = currentModels.size == 1 && 
+                                            currentModels[selectedProvider] == modelInfo.id
+                                        val isAvailable = modelInfo.isAvailable
                                         DropdownMenuItem(
+                                            enabled = isAvailable,
                                             text = { 
                                                 Row(
                                                     modifier = Modifier.fillMaxWidth(),
                                                     horizontalArrangement = Arrangement.SpaceBetween,
                                                     verticalAlignment = Alignment.CenterVertically
                                                 ) {
-                                                    Text(
-                                                        text = modelInfo.name,
-                                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                                        color = if (isSelected) 
-                                                            MaterialTheme.colorScheme.primary 
-                                                        else 
-                                                            MaterialTheme.colorScheme.onSurface,
-                                                        maxLines = 1,
-                                                        overflow = TextOverflow.Ellipsis
-                                                    )
-                                                    if (isSelected) {
+                                                    Column(modifier = Modifier.weight(1f)) {
+                                                        Text(
+                                                            text = modelInfo.name,
+                                                            fontWeight = if (isActiveModel) FontWeight.Bold else FontWeight.Normal,
+                                                            color = when {
+                                                                !isAvailable -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                                                isActiveModel -> MaterialTheme.colorScheme.primary 
+                                                                else -> MaterialTheme.colorScheme.onSurface
+                                                            },
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis
+                                                        )
+                                                        if (!isAvailable) {
+                                                            Text(
+                                                                text = "Not downloaded",
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                                                            )
+                                                        } else if (modelInfo.description != null) {
+                                                            Text(
+                                                                text = modelInfo.description,
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                    }
+                                                    if (isActiveModel) {
                                                         Icon(
                                                             imageVector = Icons.Default.Done,
                                                             contentDescription = "Selected",

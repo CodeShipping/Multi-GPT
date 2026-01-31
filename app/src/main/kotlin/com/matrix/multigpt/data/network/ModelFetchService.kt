@@ -1,14 +1,17 @@
 package com.matrix.multigpt.data.network
 
+import android.content.Context
 import com.matrix.multigpt.data.dto.GoogleModelsResponse
 import com.matrix.multigpt.data.dto.ModelFetchResult
 import com.matrix.multigpt.data.dto.ModelInfo
 import com.matrix.multigpt.data.dto.OpenAIModelsResponse
 import com.matrix.multigpt.data.model.ApiType
+import dagger.hilt.android.qualifiers.ApplicationContext
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.http.HttpHeaders
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -24,7 +27,8 @@ interface ModelFetchService {
 
 @Singleton
 class ModelFetchServiceImpl @Inject constructor(
-    private val networkClient: NetworkClient
+    private val networkClient: NetworkClient,
+    @ApplicationContext private val context: Context
 ) : ModelFetchService {
 
     override suspend fun fetchModels(
@@ -278,9 +282,77 @@ class ModelFetchServiceImpl @Inject constructor(
     }
 
     private suspend fun fetchLocalModels(): ModelFetchResult {
-        // Local models are managed by the dynamic feature module
-        // Return empty list since models are selected via the Local AI settings
-        return ModelFetchResult.Success(emptyList())
+        // Check which models are downloaded by looking in the models directory
+        val modelsDir = File(context.filesDir, "models")
+        val downloadedFiles = if (modelsDir.exists()) {
+            modelsDir.listFiles()?.map { it.name.removeSuffix(".gguf") }?.toSet() ?: emptySet()
+        } else {
+            emptySet()
+        }
+        
+        // Define available models with their file names
+        data class LocalModelDef(
+            val id: String,
+            val name: String,
+            val description: String,
+            val fileName: String
+        )
+        
+        val availableModels = listOf(
+            LocalModelDef(
+                id = "llama-3.2-1b-q4",
+                name = "Llama 3.2 1B (Q4)",
+                description = "Fast, lightweight model (~700MB) - Best for basic tasks",
+                fileName = "llama-3.2-1b-q4"
+            ),
+            LocalModelDef(
+                id = "llama-3.2-3b-q4",
+                name = "Llama 3.2 3B (Q4)",
+                description = "Balanced model (~1.8GB) - Good quality and speed",
+                fileName = "llama-3.2-3b-q4"
+            ),
+            LocalModelDef(
+                id = "phi-3-mini-q4",
+                name = "Phi 3 Mini (Q4)",
+                description = "Microsoft's efficient model (~2.3GB) - Great for coding",
+                fileName = "phi-3-mini-q4"
+            ),
+            LocalModelDef(
+                id = "gemma-2b-q4",
+                name = "Gemma 2B (Q4)",
+                description = "Google's compact model (~1.5GB) - General purpose",
+                fileName = "gemma-2b-q4"
+            ),
+            LocalModelDef(
+                id = "qwen2-1.5b-q4",
+                name = "Qwen2 1.5B (Q4)",
+                description = "Alibaba's multilingual model (~1GB) - Good for multiple languages",
+                fileName = "qwen2-1.5b-q4"
+            ),
+            LocalModelDef(
+                id = "tinyllama-1.1b-q4",
+                name = "TinyLlama 1.1B (Q4)",
+                description = "Smallest model (~640MB) - Fastest inference",
+                fileName = "tinyllama-1.1b-q4"
+            )
+        )
+        
+        // Map to ModelInfo with isAvailable based on download status
+        val models = availableModels.map { model ->
+            val isDownloaded = downloadedFiles.contains(model.fileName) || 
+                               downloadedFiles.contains(model.id)
+            ModelInfo(
+                id = model.id,
+                name = model.name,
+                description = if (isDownloaded) model.description else "${model.description} [NOT DOWNLOADED]",
+                isAvailable = isDownloaded
+            )
+        }
+        
+        // Sort: downloaded first, then by name
+        val sortedModels = models.sortedByDescending { it.isAvailable }
+        
+        return ModelFetchResult.Success(sortedModels)
     }
 
     private fun formatSize(bytes: Long): String {

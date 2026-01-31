@@ -66,6 +66,11 @@ interface LocalInferenceService {
      * Cancel any ongoing generation.
      */
     fun cancelGeneration()
+    
+    /**
+     * Check if generation is currently in progress.
+     */
+    fun isGenerating(): Boolean
 }
 
 /**

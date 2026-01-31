@@ -86,6 +86,16 @@ class LocalInferenceServiceImpl @Inject constructor(
         val model = llamaModel
             ?: throw IllegalStateException("No model loaded. Call loadModel() first.")
         
+        // Cancel any previous generation and wait for it to finish
+        if (model.isGenerating) {
+            model.cancelGeneration()
+            // Wait for generation to actually stop (up to 3 seconds)
+            repeat(30) {
+                if (!model.isGenerating) return@repeat
+                kotlinx.coroutines.delay(100)
+            }
+        }
+        
         isGenerating.set(true)
         shouldCancel.set(false)
         
@@ -94,9 +104,27 @@ class LocalInferenceServiceImpl @Inject constructor(
             val prompt = formatChatPrompt(messages)
             
             // Use streaming generation for real-time token output
-            model.generateStream(prompt).collect { token ->
-                if (!shouldCancel.get()) {
-                    emit(token)
+            // Retry with delay if generation is still in progress
+            var retries = 3
+            var lastException: Exception? = null
+            
+            while (retries > 0) {
+                try {
+                    model.generateStream(prompt).collect { token ->
+                        if (!shouldCancel.get()) {
+                            emit(token)
+                        }
+                    }
+                    break // Success - exit retry loop
+                } catch (e: Exception) {
+                    lastException = e
+                    if (e.message?.contains("already in progress") == true && retries > 1) {
+                        // Wait and retry
+                        kotlinx.coroutines.delay(500)
+                        retries--
+                    } else {
+                        throw e
+                    }
                 }
             }
             
@@ -144,6 +172,10 @@ class LocalInferenceServiceImpl @Inject constructor(
     
     override fun cancelGeneration() {
         shouldCancel.set(true)
+    }
+    
+    override fun isGenerating(): Boolean {
+        return isGenerating.get()
     }
     
     /**

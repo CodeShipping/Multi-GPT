@@ -43,7 +43,8 @@ data class ModelInfo(
     val id: String,
     val name: String,
     val description: String? = null,
-    val createdAt: Long? = null
+    val createdAt: Long? = null,
+    val isAvailable: Boolean = true // For local models: true if downloaded
 )
 
 /**

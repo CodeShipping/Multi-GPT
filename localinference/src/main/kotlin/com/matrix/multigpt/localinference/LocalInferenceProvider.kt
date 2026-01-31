@@ -135,6 +135,39 @@ class LocalInferenceProvider private constructor(context: Context) {
     }
     
     /**
+     * Cancel any ongoing generation and wait for it to complete.
+     */
+    fun cancelGeneration() {
+        inferenceService.cancelGeneration()
+        // Also cancel on the service level to properly stop native generation
+        (inferenceService as? LocalInferenceServiceImpl)?.let { service ->
+            try {
+                // Access the model via reflection and cancel it
+                val modelField = service.javaClass.getDeclaredField("llamaModel")
+                modelField.isAccessible = true
+                val model = modelField.get(service) as? org.codeshipping.llamakotlin.LlamaModel
+                model?.cancelGeneration()
+                
+                // Wait for generation to actually stop (up to 2 seconds)
+                var attempts = 0
+                while (model?.isGenerating == true && attempts < 20) {
+                    Thread.sleep(100)
+                    attempts++
+                }
+            } catch (e: Exception) {
+                // Ignore reflection errors
+            }
+        }
+    }
+    
+    /**
+     * Check if generation is currently in progress.
+     */
+    fun isGenerating(): Boolean {
+        return inferenceService.isGenerating()
+    }
+    
+    /**
      * Generate a chat response with automatic model loading.
      * This is the main entry point for chat completion that handles all complexity internally.
      * 
