@@ -168,6 +168,7 @@ class SetupViewModel @Inject constructor(
             Route.GOOGLE_MODEL_SELECT,
             Route.OLLAMA_MODEL_SELECT,
             Route.OLLAMA_API_ADDRESS,
+            Route.LOCAL_MODEL_SELECT,
             Route.SETUP_COMPLETE
         )
         val commonSteps = mutableSetOf(Route.SELECT_PLATFORM, Route.TOKEN_INPUT, Route.SETUP_COMPLETE)
@@ -178,14 +179,17 @@ class SetupViewModel @Inject constructor(
             Route.GROQ_MODEL_SELECT to ApiType.GROQ,
             Route.OLLAMA_MODEL_SELECT to ApiType.OLLAMA,
             Route.BEDROCK_MODEL_SELECT to ApiType.BEDROCK,
-            Route.OLLAMA_API_ADDRESS to ApiType.OLLAMA
+            Route.OLLAMA_API_ADDRESS to ApiType.OLLAMA,
+            Route.LOCAL_MODEL_SELECT to ApiType.LOCAL
         )
 
         val currentIndex = steps.indexOfFirst { it == currentRoute }
         val enabledPlatform = platformState.value.filter { it.selected }.map { it.name }.toSet()
 
-        if (enabledPlatform.size == 1 && ApiType.OLLAMA in enabledPlatform) {
-            // Skip API Token input page
+        // Skip API Token input page if only platforms that don't require API keys are selected
+        val platformsRequiringApiKey = enabledPlatform - setOf(ApiType.OLLAMA, ApiType.LOCAL)
+        if (platformsRequiringApiKey.isEmpty()) {
+            // All selected platforms don't require API keys (OLLAMA and/or LOCAL)
             commonSteps.remove(Route.TOKEN_INPUT)
         }
 

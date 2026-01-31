@@ -14,6 +14,7 @@ object Route {
     const val GROQ_MODEL_SELECT = "groq_model_select"
     const val OLLAMA_MODEL_SELECT = "ollama_model_select"
     const val BEDROCK_MODEL_SELECT = "bedrock_model_select"
+    const val LOCAL_MODEL_SELECT = "local_model_select"
     const val OLLAMA_API_ADDRESS = "ollama_api_address"
     const val SETUP_COMPLETE = "setup_complete"
 

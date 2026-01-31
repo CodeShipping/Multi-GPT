@@ -41,12 +41,15 @@ fun LocalAIModelsScreen(
     var isLoading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var models by remember { mutableStateOf<List<ModelInfo>>(emptyList()) }
-    var downloadingModelId by remember { mutableStateOf<String?>(null) }
-    var downloadProgress by remember { mutableStateOf(0f) }
-    var downloadedBytes by remember { mutableStateOf(0L) }
-    var totalBytes by remember { mutableStateOf(0L) }
+    // Per-model download tracking
+    var downloadingModels by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var downloadProgressMap by remember { mutableStateOf<Map<String, Float>>(emptyMap()) }
+    var downloadedBytesMap by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
+    var totalBytesMap by remember { mutableStateOf<Map<String, Long>>(emptyMap()) }
     var downloadedModels by remember { mutableStateOf<Set<String>>(emptySet()) }
     var selectedModelId by remember { mutableStateOf<String?>(null) }
+    var localEnabled by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf<ModelInfo?>(null) }
     
     // Load models from localinference module
     LaunchedEffect(Unit) {
@@ -61,6 +64,7 @@ fun LocalAIModelsScreen(
                 // Check which model is currently selected
                 val prefs = context.getSharedPreferences("local_ai_prefs", android.content.Context.MODE_PRIVATE)
                 selectedModelId = prefs.getString("selected_model_id", null)
+                localEnabled = prefs.getBoolean("local_enabled", false)
                 error = null
             } catch (e: Exception) {
                 error = "Using offline models: ${e.message}"
@@ -100,7 +104,7 @@ fun LocalAIModelsScreen(
                                 }
                             }
                         },
-                        enabled = downloadingModelId == null
+                        enabled = downloadingModels.isEmpty()
                     ) {
                         Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
                     }
@@ -170,9 +174,59 @@ fun LocalAIModelsScreen(
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
+                        // Enable/Disable Local AI toggle at top
+                        item {
+                            Card(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = "Enable Local AI",
+                                            style = MaterialTheme.typography.titleMedium
+                                        )
+                                        Text(
+                                            text = "Run AI models offline on your device",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    Switch(
+                                        checked = localEnabled,
+                                        onCheckedChange = { enabled ->
+                                            localEnabled = enabled
+                                            val prefs = context.getSharedPreferences("local_ai_prefs", android.content.Context.MODE_PRIVATE)
+                                            prefs.edit().putBoolean("local_enabled", enabled).apply()
+                                            if (!enabled) {
+                                                // Clear selected model when disabling
+                                                prefs.edit().remove("selected_model_id").apply()
+                                                selectedModelId = null
+                                            }
+                                        },
+                                        enabled = downloadedModels.isNotEmpty() || !localEnabled // Can only enable if has downloaded model, can always disable
+                                    )
+                                }
+                            }
+                        }
+                        
+                        item {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Available Models",
+                                style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        
                         items(models) { model ->
                             val isDownloaded = downloadedModels.contains(model.id)
-                            val isDownloading = downloadingModelId == model.id
+                            val isDownloading = downloadingModels.contains(model.id)
                             
                             val isSelected = selectedModelId == model.id
                             
@@ -181,57 +235,55 @@ fun LocalAIModelsScreen(
                                 isDownloaded = isDownloaded,
                                 isDownloading = isDownloading,
                                 isSelected = isSelected,
-                                downloadProgress = if (isDownloading) downloadProgress else 0f,
-                                downloadedBytes = if (isDownloading) downloadedBytes else 0L,
-                                totalBytes = if (isDownloading) totalBytes else 0L,
+                                downloadProgress = downloadProgressMap[model.id] ?: 0f,
+                                downloadedBytes = downloadedBytesMap[model.id] ?: 0L,
+                                totalBytes = totalBytesMap[model.id] ?: 0L,
                                 onDownload = { 
-                                    scope.launch {
-                                        downloadingModelId = model.id
-                                        downloadProgress = 0f
-                                        
-                                        try {
-                                            totalBytes = model.size
-                                            downloadedBytes = 0L
+                                    // Only start download if not already downloading this model
+                                    if (!downloadingModels.contains(model.id)) {
+                                        scope.launch {
+                                            // Add to downloading set
+                                            downloadingModels = downloadingModels + model.id
+                                            downloadProgressMap = downloadProgressMap + (model.id to 0f)
+                                            totalBytesMap = totalBytesMap + (model.id to model.size)
+                                            downloadedBytesMap = downloadedBytesMap + (model.id to 0L)
                                             
-                                            val success = downloadModelWithProgress(
-                                                context = context, 
-                                                modelId = model.id,
-                                                onProgress = { progress, downloaded, total ->
-                                                    downloadProgress = progress
-                                                    downloadedBytes = downloaded
-                                                    totalBytes = total
+                                            try {
+                                                val success = downloadModelWithProgress(
+                                                    context = context, 
+                                                    modelId = model.id,
+                                                    onProgress = { progress, downloaded, total ->
+                                                        downloadProgressMap = downloadProgressMap + (model.id to progress)
+                                                        downloadedBytesMap = downloadedBytesMap + (model.id to downloaded)
+                                                        if (total > 0) {
+                                                            totalBytesMap = totalBytesMap + (model.id to total)
+                                                        }
+                                                    }
+                                                )
+                                                
+                                                if (success) {
+                                                    downloadedModels = downloadedModels + model.id
+                                                    withContext(Dispatchers.Main) {
+                                                        Toast.makeText(context, "Downloaded ${model.name}", Toast.LENGTH_SHORT).show()
+                                                    }
                                                 }
-                                            )
-                                            
-                                            if (success) {
-                                                downloadedModels = downloadedModels + model.id
+                                            } catch (e: Exception) {
                                                 withContext(Dispatchers.Main) {
-                                                    Toast.makeText(context, "Downloaded ${model.name}", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
                                                 }
                                             }
-                                        } catch (e: Exception) {
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "Download failed: ${e.message}", Toast.LENGTH_LONG).show()
-                                            }
+                                            
+                                            // Remove from downloading set and clear progress
+                                            downloadingModels = downloadingModels - model.id
+                                            downloadProgressMap = downloadProgressMap - model.id
+                                            downloadedBytesMap = downloadedBytesMap - model.id
+                                            totalBytesMap = totalBytesMap - model.id
                                         }
-                                        
-                                        downloadingModelId = null
                                     }
                                 },
                                 onDelete = {
-                                    scope.launch {
-                                        try {
-                                            deleteModel(context, model.id)
-                                            downloadedModels = downloadedModels - model.id
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "Deleted ${model.name}", Toast.LENGTH_SHORT).show()
-                                            }
-                                        } catch (e: Exception) {
-                                            withContext(Dispatchers.Main) {
-                                                Toast.makeText(context, "Delete failed: ${e.message}", Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                    }
+                                    // Show confirmation dialog
+                                    showDeleteDialog = model
                                 },
                                 onUseModel = {
                                     if (isDownloaded) {
@@ -262,6 +314,65 @@ fun LocalAIModelsScreen(
                     }
                 }
             }
+        }
+        
+        // Delete confirmation dialog
+        if (showDeleteDialog != null) {
+            val modelToDelete = showDeleteDialog!!
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = null },
+                icon = {
+                    Icon(
+                        Icons.Filled.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                title = {
+                    Text("Delete Model?")
+                },
+                text = {
+                    Text("Are you sure you want to delete \"${modelToDelete.name}\"? This will remove the downloaded model file (${formatSize(modelToDelete.size)}) from your device.")
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    deleteModel(context, modelToDelete.id)
+                                    downloadedModels = downloadedModels - modelToDelete.id
+                                    // Clear selection if deleting selected model
+                                    if (selectedModelId == modelToDelete.id) {
+                                        selectedModelId = null
+                                        val prefs = context.getSharedPreferences("local_ai_prefs", android.content.Context.MODE_PRIVATE)
+                                        prefs.edit().remove("selected_model_id").apply()
+                                    }
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Deleted ${modelToDelete.name}", Toast.LENGTH_SHORT).show()
+                                    }
+                                } catch (e: Exception) {
+                                    withContext(Dispatchers.Main) {
+                                        Toast.makeText(context, "Delete failed: ${e.message}", Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            }
+                            showDeleteDialog = null
+                        },
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Text("Delete")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { showDeleteDialog = null }
+                    ) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
@@ -621,38 +732,27 @@ private fun ModelCard(
                 
                 when {
                     isDownloaded -> {
-                        Row {
-                            if (isSelected) {
-                                FilledTonalButton(
-                                    onClick = { /* Already selected */ },
-                                    colors = ButtonDefaults.filledTonalButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                ) {
-                                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Selected")
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            // Show "Downloaded" badge
+                            AssistChip(
+                                onClick = {},
+                                label = { Text("Downloaded") },
+                                leadingIcon = {
+                                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                                 }
-                            } else {
-                                FilledTonalButton(
-                                    onClick = onUseModel,
-                                    colors = ButtonDefaults.filledTonalButtonColors(
-                                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                                    )
-                                ) {
-                                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Select")
-                                }
-                            }
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
-                            IconButton(onClick = onDelete) {
-                                Icon(
-                                    Icons.Filled.Delete, 
-                                    contentDescription = "Delete",
-                                    tint = MaterialTheme.colorScheme.error
+                            // Delete button
+                            FilledTonalButton(
+                                onClick = onDelete,
+                                colors = ButtonDefaults.filledTonalButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
                                 )
+                            ) {
+                                Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Delete")
                             }
                         }
                     }

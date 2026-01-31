@@ -74,7 +74,7 @@ fun TokenInputScreen(
             )
             Spacer(modifier = Modifier.weight(1f))
             PrimaryLongButton(
-                enabled = platformState.filter { it.selected && it.name != ApiType.OLLAMA }.all { platform -> platform.token != null },
+                enabled = platformState.filter { it.selected && it.name != ApiType.OLLAMA && it.name != ApiType.LOCAL }.all { platform -> platform.token != null },
                 onClick = {
                     val nextStep = setupViewModel.getNextSetupRoute(currentRoute)
                     onNavigate(nextStep)
@@ -125,9 +125,9 @@ fun TokenInput(
     val helpLinks = getPlatformHelpLinkResources()
 
     Column(modifier = modifier) {
-        // Ollama doesn't currently support api keys
-        platforms.filter { it.selected && it.name != ApiType.OLLAMA }.forEachIndexed { i, platform ->
-            val isLast = platforms.filter { it.selected && it.name != ApiType.OLLAMA }.size - 1 == i
+        // Ollama and LOCAL don't require API keys
+        platforms.filter { it.selected && it.name != ApiType.OLLAMA && it.name != ApiType.LOCAL }.forEachIndexed { i, platform ->
+            val isLast = platforms.filter { it.selected && it.name != ApiType.OLLAMA && it.name != ApiType.LOCAL }.size - 1 == i
             
             if (platform.name == ApiType.BEDROCK) {
                 BedrockCredentialsField(

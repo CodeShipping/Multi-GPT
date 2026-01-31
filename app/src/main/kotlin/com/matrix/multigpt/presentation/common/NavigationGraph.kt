@@ -182,6 +182,21 @@ fun NavGraphBuilder.setupNavigation(
                 onBackAction = { navController.navigateUp() }
             )
         }
+        composable(route = Route.LOCAL_MODEL_SELECT) {
+            val parentEntry = remember(it) {
+                navController.getBackStackEntry(Route.SETUP_ROUTE)
+            }
+            val setupViewModel: SetupViewModel = hiltViewModel(parentEntry)
+            // Use LocalAIModelsScreen for model download in setup flow
+            LocalAIModelsScreen(
+                onNavigateBack = { navController.navigateUp() },
+                onNavigateToChat = { modelId: String, modelPath: String ->
+                    // Model downloaded - continue setup flow
+                    val nextStep = setupViewModel.getNextSetupRoute(Route.LOCAL_MODEL_SELECT)
+                    navController.navigate(nextStep)
+                }
+            )
+        }
         composable(route = Route.SETUP_COMPLETE) {
             val parentEntry = remember(it) {
                 navController.getBackStackEntry(Route.SETUP_ROUTE)

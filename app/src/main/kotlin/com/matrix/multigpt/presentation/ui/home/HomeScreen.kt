@@ -78,6 +78,11 @@ import com.matrix.multigpt.presentation.common.PlatformCheckBoxItem
 import com.matrix.multigpt.util.AdMobManager
 import com.matrix.multigpt.util.getPlatformTitleResources
 import com.matrix.multigpt.util.PreloadInterstitialAd
+import kotlinx.coroutines.launch
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -98,6 +103,8 @@ fun HomeScreen(
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val lifecycleState by lifecycleOwner.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
 
     LaunchedEffect(lifecycleState) {
         if (lifecycleState == Lifecycle.State.RESUMED && !chatListState.isSelectionMode) {
@@ -116,6 +123,7 @@ fun HomeScreen(
     Scaffold(
         modifier = Modifier
             .nestedScroll(scrollBehavior.nestedScrollConnection),
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             HomeTopAppBar(
                 chatListState.isSelectionMode,
@@ -136,7 +144,7 @@ fun HomeScreen(
         floatingActionButton = {
             NewChatButton(
                 expanded = listState.isScrollingUp(),
-                enabled = true, // Always enabled, but shows toast if no platforms configured
+                enabled = true, // Always enabled, but shows snackbar if no platforms configured
                 onClick = {
                     if (!isPlatformsLoaded) return@NewChatButton
                     
@@ -149,7 +157,16 @@ fun HomeScreen(
                     }
                     
                     if (enabledApiTypes.isEmpty()) {
-                        Toast.makeText(context, context.getString(R.string.enable_at_leat_one_platform), Toast.LENGTH_LONG).show()
+                        scope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = context.getString(R.string.no_provider_configured),
+                                actionLabel = context.getString(R.string.settings),
+                                duration = SnackbarDuration.Long
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                settingOnClick()
+                            }
+                        }
                         return@NewChatButton
                     }
                     
