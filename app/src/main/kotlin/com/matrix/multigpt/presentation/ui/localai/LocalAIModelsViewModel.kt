@@ -235,13 +235,23 @@ class LocalAIModelsViewModel @Inject constructor(
             val path = getModelPath(model.id)
             if (path != null) {
                 _selectedModelId.value = model.id
-                val prefs = context.getSharedPreferences("local_ai_prefs", Context.MODE_PRIVATE)
-                prefs.edit()
+                
+                // Update local_ai_prefs
+                val localPrefs = context.getSharedPreferences("local_ai_prefs", Context.MODE_PRIVATE)
+                localPrefs.edit()
                     .putString("selected_model_id", model.id)
                     .putString("selected_model_name", model.name)
                     .putBoolean("local_enabled", true)
                     .apply()
                 _localEnabled.value = true
+                
+                // IMPORTANT: Also set app_prefs so ChatViewModel knows to use LOCAL provider
+                // This is what ChatViewModel checks to determine active provider/model
+                val appPrefs = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+                appPrefs.edit()
+                    .putString("active_provider", "LOCAL")
+                    .putString("active_model", model.id)
+                    .apply()
             }
         }
     }

@@ -29,6 +29,7 @@ import kotlinx.coroutines.launch
 
 @HiltViewModel
 class SetupViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val settingRepository: SettingRepository,
     private val modelFetchService: ModelFetchService,
     private val firebaseManager: FirebaseManager
@@ -146,6 +147,34 @@ class SetupViewModel @Inject constructor(
                 // Verify the save was successful by reading back
                 val savedPlatforms = settingRepository.fetchPlatforms()
                 Log.d("SetupViewModel", "Verified platforms: ${savedPlatforms.filter { it.enabled }.map { "${it.name}:${it.token != null}" }}")
+
+                // IMPORTANT: Set app_prefs with the first enabled provider and model
+                // This is what ChatViewModel checks to determine active provider/model
+                // First try non-LOCAL providers (they have model set in platformState)
+                val firstEnabled = updatedPlatforms.firstOrNull { it.enabled && it.name != ApiType.LOCAL && it.model != null }
+                val appPrefs = context.getSharedPreferences("app_prefs", android.content.Context.MODE_PRIVATE)
+                
+                if (firstEnabled != null) {
+                    appPrefs.edit()
+                        .putString("active_provider", firstEnabled.name.name)
+                        .putString("active_model", firstEnabled.model)
+                        .apply()
+                    Log.d("SetupViewModel", "Set active_provider=${firstEnabled.name}, active_model=${firstEnabled.model}")
+                } else {
+                    // Check if LOCAL is enabled (its model is stored in local_ai_prefs)
+                    val localPlatform = updatedPlatforms.firstOrNull { it.enabled && it.name == ApiType.LOCAL }
+                    if (localPlatform != null) {
+                        val localPrefs = context.getSharedPreferences("local_ai_prefs", android.content.Context.MODE_PRIVATE)
+                        val localModel = localPrefs.getString("selected_model_id", null)
+                        if (localModel != null) {
+                            appPrefs.edit()
+                                .putString("active_provider", "LOCAL")
+                                .putString("active_model", localModel)
+                                .apply()
+                            Log.d("SetupViewModel", "Set active_provider=LOCAL, active_model=$localModel")
+                        }
+                    }
+                }
 
                 // Call completion callback after DataStore write completes
                 onComplete?.invoke()
