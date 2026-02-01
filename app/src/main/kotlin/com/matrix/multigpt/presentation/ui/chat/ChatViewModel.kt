@@ -44,6 +44,9 @@ class ChatViewModel @Inject constructor(
     val enabledPlatformsInChat = enabledPlatformString.split(',').map { s -> ApiType.valueOf(s) }
     private val currentTimeStamp: Long
         get() = System.currentTimeMillis() / 1000
+    
+    // SharedPreferences for tracking context window per chat (local AI only)
+    private val contextWindowPrefs = context.getSharedPreferences("local_context_windows", Context.MODE_PRIVATE)
 
     private val _chatRoom = MutableStateFlow<ChatRoom>(ChatRoom(id = -1, title = "", enabledPlatform = enabledPlatformsInChat))
     val chatRoom = _chatRoom.asStateFlow()
@@ -501,11 +504,25 @@ class ChatViewModel @Inject constructor(
                     @Suppress("UNCHECKED_CAST")
                     val resultFlow = generateMethod.invoke(provider, modelId, chatMessages, 0.7f, 512) as kotlinx.coroutines.flow.Flow<String>
                     
+                    // Track if context was reset (first token is the reset warning)
+                    var isFirstToken = true
+                    var contextWasReset = false
+                    
                     // Collect from the flow with timeout to prevent infinite loop
                     var hasEmitted = false
                     kotlinx.coroutines.withTimeoutOrNull(120_000L) { // 2 minute timeout
                         resultFlow.collect { token ->
                             hasEmitted = true
+                            
+                            // Check if first token is the context reset warning
+                            if (isFirstToken) {
+                                isFirstToken = false
+                                if (token.contains("Context limit exceeded")) {
+                                    contextWasReset = true
+                                    Log.i("ChatViewModel", "Context limit exceeded - will clean old messages after response")
+                                }
+                            }
+                            
                             localFlow.emit(ApiState.Success(token))
                         }
                     }
@@ -515,6 +532,11 @@ class ChatViewModel @Inject constructor(
                         localFlow.emit(ApiState.Error("Model did not generate any response. The model may be incompatible or corrupted."))
                     }
                     localFlow.emit(ApiState.Done)
+                    
+                    // CRITICAL: If context was reset, clean old messages from database AFTER response completes
+                    if (contextWasReset) {
+                        cleanOldMessagesForContextReset()
+                    }
                     
                 } catch (e: ClassNotFoundException) {
                     localFlow.emit(ApiState.Error("Local inference module not installed. Please install it from Settings."))
@@ -543,14 +565,58 @@ class ChatViewModel @Inject constructor(
     }
     
     /**
-     * Build chat messages as List<Pair<String, String>> for local inference.
-     * Uses simple Pair class which is available in both modules.
+     * Get context window start index for a specific chat (local AI only).
+     * Each chat maintains its own window counter.
+     */
+    private fun getContextWindowStart(chatRoomId: Int): Int {
+        return contextWindowPrefs.getInt("window_start_$chatRoomId", 0)
+    }
+    
+    /**
+     * Set context window start index for a specific chat (local AI only).
+     */
+    private fun setContextWindowStart(chatRoomId: Int, startIndex: Int) {
+        contextWindowPrefs.edit()
+            .putInt("window_start_$chatRoomId", startIndex)
+            .apply()
+        Log.d("ChatViewModel", "Chat $chatRoomId context window set to start at index $startIndex")
+    }
+    
+    /**
+     * Reset context window counter when limit exceeded.
+     * Uses sliding window - messages stay in DB, but only recent ones are sent to model.
+     */
+    private fun cleanOldMessagesForContextReset() {
+        val chatRoomId = _chatRoom.value.id
+        if (chatRoomId <= 0) return
+        
+        // Calculate new window start - keep last 6 messages (3 turns)
+        val currentMessages = _messages.value
+        val newWindowStart = maxOf(0, currentMessages.size - 6)
+        
+        setContextWindowStart(chatRoomId, newWindowStart)
+        
+        Log.i("ChatViewModel", "Context reset for chat $chatRoomId: window moved to index $newWindowStart (${currentMessages.size - newWindowStart} messages in window)")
+    }
+    
+    /**
+     * Build chat messages for local inference using sliding window.
+     * Only sends messages from the current window start onwards.
+     * Each chat has independent window tracking via SharedPreferences.
      */
     private fun buildLocalChatMessages(): List<Pair<String, String>> {
+        val chatRoomId = _chatRoom.value.id
+        val windowStart = if (chatRoomId > 0) getContextWindowStart(chatRoomId) else 0
+        
+        // Get messages from window start onwards (sliding window)
+        val recentMessages = _messages.value.drop(windowStart)
+        
+        Log.d("ChatViewModel", "Building local messages for chat $chatRoomId: window_start=$windowStart, sending ${recentMessages.size} messages")
+        
         val messages = mutableListOf<Pair<String, String>>()
         
-        // Add history (only include non-error messages)
-        _messages.value.filter { !it.content.startsWith("Error:") }.forEach { msg ->
+        // Add history from current window (only include non-error messages)
+        recentMessages.filter { !it.content.startsWith("Error:") && !it.content.startsWith("⚠️") }.forEach { msg ->
             val role = if (msg.platformType == null) "user" else "assistant"
             messages.add(Pair(role, msg.content))
         }

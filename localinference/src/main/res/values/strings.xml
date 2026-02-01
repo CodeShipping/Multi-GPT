@@ -104,6 +104,13 @@
     <string name="import_no_valid_files">No valid GGUF files found</string>
     <string name="filter_imported">Imported</string>
 
+    <!-- Info Card -->
+    <string name="local_ai_info_title">About Local AI</string>
+    <string name="local_ai_info_ram">• RAM: Larger models (1B+) need 6–8GB RAM. Smaller models (0.5B) work on 4GB.</string>
+    <string name="local_ai_info_context">• Context: Models refresh context after ~100–400 tokens. Long conversations keep only recent messages.</string>
+    <string name="local_ai_info_accuracy">• Accuracy: Local models may make mistakes. Double-check important information.</string>
+    <string name="local_ai_info_tip">Tip: Start with 0.5B models if unsure about your device\'s capabilities.</string>
+
     <!-- Accessibility -->
     <string name="cd_model_icon">Model icon</string>
     <string name="cd_download_progress">Download progress: %d percent</string>

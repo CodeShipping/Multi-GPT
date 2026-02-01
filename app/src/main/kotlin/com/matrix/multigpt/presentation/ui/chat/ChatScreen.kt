@@ -175,9 +175,12 @@ fun ChatScreen(
         listState.animateScrollToItem(groupedMessages.keys.size)
     }
 
+    // Scroll to bottom instantly when chat first loads (no animation for initial load)
     LaunchedEffect(isLoaded) {
-        delay(300)
-        listState.animateScrollToItem(groupedMessages.keys.size)
+        if (isLoaded && groupedMessages.isNotEmpty()) {
+            // Use scrollToItem for instant scroll (no animation) on initial load
+            listState.scrollToItem(groupedMessages.keys.size)
+        }
     }
 
     // Auto-scroll to bottom when keyboard opens

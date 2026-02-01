@@ -12,14 +12,21 @@ import com.matrix.multigpt.localinference.data.source.ModelDownloadManager
 import com.matrix.multigpt.localinference.presentation.ui.compose.ModelListScreen
 import com.matrix.multigpt.localinference.service.ChatMessage
 import com.matrix.multigpt.localinference.service.ChatRole
+import com.matrix.multigpt.localinference.service.ConversationSummarizer
 import com.matrix.multigpt.localinference.service.LocalInferenceService
 import com.matrix.multigpt.localinference.service.LocalInferenceServiceImpl
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.launch
+import java.util.concurrent.Executors
 
 /**
  * Main entry point for the Local Inference dynamic feature module.
@@ -46,7 +53,30 @@ import kotlinx.coroutines.launch
 class LocalInferenceProvider private constructor(context: Context) {
     
     private val appContext = context.applicationContext
-    private val scope = CoroutineScope(Dispatchers.IO)
+    
+    // Dedicated single-threaded dispatcher for inference (better thread affinity for native code)
+    private val inferenceDispatcher = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "local-inference").apply { 
+            priority = Thread.MAX_PRIORITY - 1 // High priority but not max
+        }
+    }.asCoroutineDispatcher()
+    
+    // Background scope for non-inference tasks (downloads, cleanup)
+    private val backgroundScope = CoroutineScope(
+        Dispatchers.IO + SupervisorJob() + CoroutineName("LocalProvider-Background")
+    )
+    
+    // Inference scope with dedicated thread
+    private val inferenceScope = CoroutineScope(
+        inferenceDispatcher + SupervisorJob() + CoroutineName("LocalProvider-Inference")
+    )
+    
+    // Backward compatibility alias
+    private val scope get() = backgroundScope
+    
+    // Track if previous generation was truncated
+    // Only show warning when truncation FIRST happens (transition from not-truncated to truncated)
+    private var previousGenerationWasTruncated = false
     
     // Lazy initialization of components
     private val modelCatalogService: ModelCatalogServiceImpl by lazy {
@@ -81,6 +111,13 @@ class LocalInferenceProvider private constructor(context: Context) {
      */
     val inferenceService: LocalInferenceService by lazy {
         LocalInferenceServiceImpl(appContext)
+    }
+    
+    /**
+     * Conversation summarizer - generates background summaries for context management.
+     */
+    val summarizer: ConversationSummarizer by lazy {
+        ConversationSummarizer(appContext)
     }
     
     /**
@@ -129,10 +166,36 @@ class LocalInferenceProvider private constructor(context: Context) {
     
     /**
      * Cleanup resources when done.
+     * Call this when the feature is disabled or app is closing.
      */
     fun cleanup() {
+        android.util.Log.d("LocalProvider", "Cleaning up resources...")
+        
+        // Cancel any ongoing generation first
+        cancelGeneration()
+        
+        // Cleanup summarizer
+        summarizer.cancel()
+        
+        // Cleanup download manager
         downloadManager.cleanup()
+        
+        // Unload model
         inferenceService.unloadModel()
+        
+        // Cancel scopes
+        backgroundScope.cancel()
+        inferenceScope.cancel()
+        
+        // Close dedicated dispatcher
+        try {
+            @Suppress("DEPRECATION")
+            (inferenceDispatcher as? java.io.Closeable)?.close()
+        } catch (e: Exception) {
+            android.util.Log.w("LocalProvider", "Error closing dispatcher: ${e.message}")
+        }
+        
+        android.util.Log.d("LocalProvider", "Cleanup complete")
     }
     
     /**
@@ -169,6 +232,134 @@ class LocalInferenceProvider private constructor(context: Context) {
     }
     
     /**
+     * Estimate token count from text.
+     * Rule of thumb: 1 token ≈ 4 characters for English text.
+     */
+    private fun estimateTokens(text: String): Int {
+        return (text.length / 4).coerceAtLeast(1)
+    }
+    
+    /**
+     * Check if device has enough memory for generation.
+     * Returns null if OK, or an error message if memory is too low.
+     */
+    private fun checkMemoryBeforeGeneration(): String? {
+        try {
+            val activityManager = appContext.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            val memInfo = android.app.ActivityManager.MemoryInfo()
+            activityManager.getMemoryInfo(memInfo)
+            
+            val availableMB = memInfo.availMem / (1024 * 1024)
+            val isLowMemory = memInfo.lowMemory
+            
+            android.util.Log.d("LocalProvider", "Pre-generation memory check: ${availableMB}MB available, lowMemory=$isLowMemory")
+            
+            // Critical thresholds - if below these, don't even attempt generation
+            return when {
+                isLowMemory -> {
+                    "Device is in low memory state. Please close other apps and try again."
+                }
+                availableMB < 300 -> {
+                    "Not enough memory available (${availableMB}MB). Need at least 300MB free. Please close other apps."
+                }
+                availableMB < 500 -> {
+                    // Borderline - warn but allow
+                    android.util.Log.w("LocalProvider", "Memory borderline: ${availableMB}MB. Generation may fail.")
+                    null // Allow attempt but may fail
+                }
+                else -> null // OK
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("LocalProvider", "Could not check memory: ${e.message}")
+            return null // Allow attempt if we can't check
+        }
+    }
+    
+    /**
+     * Smart context management: truncates or summarizes messages to fit context window.
+     * 
+     * @param messages Original messages
+     * @param maxContextTokens Maximum tokens for the prompt (reserves space for response)
+     * @return Processed messages that fit within context
+     */
+    private suspend fun manageContext(
+        messages: List<Pair<String, String>>,
+        maxContextTokens: Int = 1500 // Reserve ~500 tokens for response
+    ): List<Pair<String, String>> {
+        // Calculate total estimated tokens
+        val totalTokens = messages.sumOf { estimateTokens(it.second) }
+        
+        android.util.Log.d("LocalProvider", "Context management: ${messages.size} messages, ~$totalTokens tokens (limit: $maxContextTokens)")
+        
+        // If within limit, return as-is
+        if (totalTokens <= maxContextTokens) {
+            return messages
+        }
+        
+        android.util.Log.d("LocalProvider", "Context exceeds limit, applying smart truncation...")
+        
+        // Strategy 1: Always keep the last user message (current question)
+        val lastUserMessage = messages.lastOrNull { it.first.lowercase() == "user" }
+        val lastUserTokens = lastUserMessage?.let { estimateTokens(it.second) } ?: 0
+        
+        // Calculate remaining budget
+        val remainingBudget = maxContextTokens - lastUserTokens - 100 // 100 token buffer
+        
+        if (remainingBudget <= 0 || maxContextTokens < 30) {
+            // Even the current message is too long - truncate it to fit available context
+            android.util.Log.w("LocalProvider", "Current message too long, truncating to fit context...")
+            // Ensure we have at least some characters (min 50 chars for a meaningful prompt)
+            val maxChars = maxOf(50, maxContextTokens * 4 - 50)
+            val content = lastUserMessage?.second?.take(maxChars) ?: ""
+            return listOf("user" to content)
+        }
+        
+        // Strategy 2: Keep recent context, summarize or drop old messages
+        val result = mutableListOf<Pair<String, String>>()
+        var usedTokens = 0
+        
+        // Process messages from most recent to oldest (excluding last user message)
+        val historyMessages = if (lastUserMessage != null) {
+            messages.dropLast(1).reversed()
+        } else {
+            messages.reversed()
+        }
+        
+        // Keep messages that fit
+        for (msg in historyMessages) {
+            val msgTokens = estimateTokens(msg.second)
+            
+            if (usedTokens + msgTokens <= remainingBudget) {
+                result.add(0, msg)
+                usedTokens += msgTokens
+            } else if (usedTokens == 0) {
+                // First message doesn't fit - truncate it
+                val maxChars = remainingBudget * 4
+                val truncatedContent = msg.second.take(maxChars) + "... [truncated]"
+                result.add(0, msg.first to truncatedContent)
+                usedTokens += estimateTokens(truncatedContent)
+                break
+            } else {
+                // No more room - create a summary placeholder for dropped messages
+                val droppedCount = historyMessages.size - result.size
+                if (droppedCount > 0) {
+                    android.util.Log.d("LocalProvider", "Dropped $droppedCount old messages")
+                }
+                break
+            }
+        }
+        
+        // Add back the last user message
+        if (lastUserMessage != null) {
+            result.add(lastUserMessage)
+        }
+        
+        android.util.Log.d("LocalProvider", "Context reduced to ${result.size} messages, ~${usedTokens + lastUserTokens} tokens")
+        
+        return result
+    }
+    
+    /**
      * Generate a chat response with automatic model loading.
      * This is the main entry point for chat completion that handles all complexity internally.
      * 
@@ -185,6 +376,13 @@ class LocalInferenceProvider private constructor(context: Context) {
         maxTokens: Int = 512
     ): Flow<String> = flow {
         android.util.Log.d("LocalProvider", "generateChatResponse called for model: $modelId")
+        
+        // CRITICAL: Pre-flight memory check to prevent native crash
+        val memoryError = checkMemoryBeforeGeneration()
+        if (memoryError != null) {
+            android.util.Log.e("LocalProvider", "Memory check failed: $memoryError")
+            throw IllegalStateException(memoryError)
+        }
         
         // Get model path
         val modelPath = getModelPath(modelId)
@@ -215,16 +413,32 @@ class LocalInferenceProvider private constructor(context: Context) {
         
         ensureModelLoaded()
         
-        // Limit messages to last few to reduce prompt size
-        val limitedMessages = if (messages.size > 6) {
-            android.util.Log.d("LocalProvider", "Truncating messages from ${messages.size} to 6")
-            messages.takeLast(6)
-        } else {
-            messages
+        // Get context size from loaded model info, fallback to conservative estimate
+        val modelInfo = inferenceService.getModelInfo()
+        val contextSize = modelInfo?.contextSize ?: 2048
+        
+        // Calculate available tokens for prompt, ensuring minimum viable size
+        // Reserve: system prompt (~30), response (~min(maxTokens, contextSize/3)), overhead (20)
+        val responseReserve = minOf(maxTokens, contextSize / 3)
+        val maxPromptTokens = maxOf(50, contextSize - 30 - responseReserve - 20)  // Minimum 50 tokens for prompt
+        
+        android.util.Log.d("LocalProvider", "Context size: $contextSize, response reserve: $responseReserve, max prompt tokens: $maxPromptTokens")
+        
+        // If context is too small for meaningful conversation, throw error
+        if (contextSize < 128) {
+            throw IllegalStateException(
+                "Context size too small ($contextSize tokens). Please close other apps to free memory, or try a smaller model."
+            )
         }
         
+        // Pass all messages through - LocalInferenceServiceImpl handles truncation at prompt level
+        // This is more accurate since it truncates AFTER template formatting
+        val managedMessages = messages
+        
+        android.util.Log.d("LocalProvider", "Passing ${managedMessages.size} messages to inference service")
+        
         // Convert messages to ChatMessage format
-        val chatMessages = limitedMessages.map { (role, content) ->
+        val chatMessages = managedMessages.map { (role, content) ->
             val chatRole = when (role.lowercase()) {
                 "user" -> ChatRole.USER
                 "assistant" -> ChatRole.ASSISTANT
@@ -251,6 +465,19 @@ class LocalInferenceProvider private constructor(context: Context) {
                 val response = syncResult.getOrNull()
                 if (!response.isNullOrBlank()) {
                     android.util.Log.d("LocalProvider", "Sync generation succeeded: ${response.take(50)}...")
+                    
+                    // Check if truncation happened - only warn when transitioning TO truncated state
+                    val serviceImpl = inferenceService as? LocalInferenceServiceImpl
+                    val currentlyTruncated = serviceImpl?.lastGenerationWasTruncated == true
+                    
+                    // Only emit warning when: current is truncated AND previous was NOT truncated
+                    if (currentlyTruncated && !previousGenerationWasTruncated) {
+                        android.util.Log.w("LocalProvider", "Context truncation started - emitting warning")
+                        emit("⚠️ Context limit reached. Keeping only recent messages.\n\n")
+                    }
+                    
+                    // Update state for next time
+                    previousGenerationWasTruncated = currentlyTruncated
                     // Emit character by character to simulate streaming
                     response.chunked(1).forEach { char ->
                         emit(char)
@@ -274,6 +501,12 @@ class LocalInferenceProvider private constructor(context: Context) {
                         val response = retryResult.getOrNull()
                         if (!response.isNullOrBlank()) {
                             android.util.Log.d("LocalProvider", "Retry sync generation succeeded")
+                            
+                            // Check if truncation happened
+                            val serviceImpl = inferenceService as? LocalInferenceServiceImpl
+                            if (serviceImpl?.lastGenerationWasTruncated == true) {
+                                emit("⚠️ Context limit reached. Keeping only recent messages.\n\n")
+                            }
                             response.chunked(1).forEach { char ->
                                 emit(char)
                                 kotlinx.coroutines.delay(1)
@@ -300,9 +533,18 @@ class LocalInferenceProvider private constructor(context: Context) {
         // If sync didn't work, try streaming
         if (!hasEmittedToken) {
             android.util.Log.d("LocalProvider", "Trying streaming generation...")
+            var streamWarningEmitted = false
             try {
                 kotlinx.coroutines.withTimeoutOrNull(60_000L) { // 60 second timeout for streaming
                     inferenceService.generateChatCompletion(chatMessages, temperature, maxTokens).collect { token ->
+                        // Check for truncation warning on first token
+                        if (!streamWarningEmitted) {
+                            val serviceImpl = inferenceService as? LocalInferenceServiceImpl
+                            if (serviceImpl?.lastGenerationWasTruncated == true) {
+                                emit("⚠️ Context limit reached. Keeping only recent messages.\n\n")
+                            }
+                            streamWarningEmitted = true
+                        }
                         hasEmittedToken = true
                         emit(token)
                     }
