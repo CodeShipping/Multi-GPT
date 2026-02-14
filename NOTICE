@@ -1,0 +1,45 @@
+MultiGPT
+Copyright (C) 2025 Prasoon Kumar
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+================================================================================
+
+THIRD PARTY COMPONENTS
+
+This project builds upon and is inspired by GPT Mobile:
+
+GPT Mobile
+Copyright (C) 2024 Taewan Park
+Licensed under GNU General Public License v3.0
+Repository: https://github.com/Taewan-P/gpt_mobile
+
+MultiGPT acknowledges and incorporates architectural concepts, design patterns,
+and implementation approaches from GPT Mobile, including:
+- Multi-model chat interface architecture
+- API integration patterns for multiple AI providers
+- Modern Android development practices with Jetpack Compose
+- Material You design implementation
+
+For complete license information and attributions, please see:
+- LICENSE file (GNU GPL v3.0 full text)
+- THIRD_PARTY_LICENSES.md (detailed attribution information)
+
+================================================================================
+
+CONTACT
+
+For questions about licensing or usage, please contact:
+Email: support@codeshipping.org
+GitHub: https://github.com/CodeShipping/Multi-GPT

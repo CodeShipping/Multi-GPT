@@ -125,17 +125,27 @@
     <string name="github" translatable="false">GitHub</string>
     <string name="play_store" translatable="false">Play Store</string>
     <string name="feedback">Feedback</string>
-    <string name="license_description">Open Source Licenses</string>
+    <string name="license_description">GNU GPL-3.0 License</string>
+    <string name="source_code">Source Code</string>
+    <string name="source_code_description">View on GitHub</string>
+    <string name="gpl_license_info">GPL-3.0 License Info</string>
+    <string name="gpl_license_info_description">This app is free and open source software</string>
+    <string name="third_party_licenses">Third Party Licenses</string>
+    <string name="third_party_licenses_description">GPT Mobile attribution and dependencies</string>
     <string name="feedback_description">We are open to all kinds of feedback!</string>
     <string name="version_icon">Version Icon</string>
     <string name="license_icon">License Icon</string>
     <string name="feedback_icon">Feedback Icon</string>
     <string name="github_icon">GitHub Icon</string>
     <string name="play_store_icon">Play Store Icon</string>
-    <string name="github_link" translatable="false">https://github.com/it5prasoon/MultiGPT</string>
+    <string name="source_code_icon">Source Code Icon</string>
+    <string name="gpl_info_icon">GPL License Icon</string>
+    <string name="github_link" translatable="false">https://github.com/CodeShipping/Multi-GPT</string>
     <string name="play_store_link" translatable="false">https://play.google.com/store/apps/details?id=com.matrix.multigpt</string>
-    <string name="bug_report_link" translatable="false">https://github.com/it5prasoon/MultiGPT/issues/new/choose</string>
-    <string name="feedback_link" translatable="false">https://github.com/it5prasoon/MultiGPT/discussions/new/choose</string>
+    <string name="bug_report_link" translatable="false">https://github.com/CodeShipping/Multi-GPT/issues/new/choose</string>
+    <string name="feedback_link" translatable="false">https://github.com/CodeShipping/Multi-GPT/discussions/new/choose</string>
+    <string name="gpl_license_link" translatable="false">https://www.gnu.org/licenses/gpl-3.0.html</string>
+    <string name="gpt_mobile_link" translatable="false">https://github.com/Taewan-P/gpt_mobile</string>
     <string name="api_url">API URL</string>
     <string name="url_icon">URL Icon</string>
     <string name="invalid_api_url">Please enter a valid URL.</string>

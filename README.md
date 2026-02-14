@@ -5,7 +5,7 @@ A native Android app for chatting with multiple AI models simultaneously.
 [![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://android.com)
 [![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple.svg)](https://kotlinlang.org)
 [![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-blue.svg)](https://developer.android.com/jetpack/compose)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 
 <p>
   <a href="https://play.google.com/store/apps/details?id=com.matrix.multigpt">
@@ -22,11 +22,11 @@ MultiGPT allows users to communicate with multiple AI providers (OpenAI, Anthrop
 <div align="center">
 
 ### App Introduction & Setup
-|                                  Getting Started                                  |                                             Settings                                              |                                            API Config                                            |
+|                                  Getting Started                                  |                                             Provider Selection                                              |                                            Provider Config                                            |
 |:---------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------:|
-| <img src="metadata/en-US/images/phoneScreenshots/1-get-started.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/2-get-started-select-provider.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/2-5-select-platform-new-chat.png" width="200"/> |
+| <img src="metadata/en-US/images/phoneScreenshots/1-get-started.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/2-get-started-select-provider.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/6-provider-config.png" width="200"/> |
 
-|                                 Model Selection                                 |                                   Custom Prompt                                   |                                  Chat Screen                                   |
+|                                 Chat List                                 |                                   Chat Screen                                   |                                  Settings                                   |
 |:-------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------:|:------------------------------------------------------------------------------:|
 | <img src="metadata/en-US/images/phoneScreenshots/3-chat-list.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/4-chat-screen.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/5-settings.png" width="200"/> |
 
@@ -73,7 +73,7 @@ app/src/main/kotlin/com/matrix/multigpt/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/it5prasoon/MultiGPT.git
+   git clone https://github.com/CodeShipping/Multi-GPT.git
    cd MultiGPT
    ```
 
@@ -243,13 +243,17 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and [C
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
+### Attribution
+
+This project is inspired by and builds upon concepts from [GPT Mobile](https://github.com/Taewan-P/gpt_mobile) by Taewan Park, which is also licensed under GPL-3.0. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for complete attribution and license information.
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/it5prasoon/MultiGPT/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/it5prasoon/MultiGPT/discussions)
-- **Email**: [prasoonkumar008@gmail.com](mailto:prasoonkumar008@gmail.com)
+- **Issues**: [GitHub Issues](https://github.com/CodeShipping/Multi-GPT/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/CodeShipping/Multi-GPT/discussions)
+- **Email**: [support@codeshipping.org](mailto:support@codeshipping.org)
 
 ---
 

@@ -79,8 +79,36 @@ fun AboutScreen(
             )
             SettingItem(
                 modifier = Modifier.height(64.dp),
-                title = stringResource(R.string.license),
-                description = stringResource(R.string.license_description),
+                title = stringResource(R.string.gpl_license_info),
+                description = stringResource(R.string.gpl_license_info_description),
+                onItemClick = { uriHandler.openUri(context.getString(R.string.gpl_license_link)) },
+                showTrailingIcon = false,
+                showLeadingIcon = true,
+                leadingIcon = {
+                    Icon(
+                        ImageVector.vectorResource(id = R.drawable.ic_license),
+                        contentDescription = stringResource(R.string.gpl_info_icon)
+                    )
+                }
+            )
+            SettingItem(
+                modifier = Modifier.height(64.dp),
+                title = stringResource(R.string.source_code),
+                description = stringResource(R.string.source_code_description),
+                onItemClick = { uriHandler.openUri(githubLink) },
+                showTrailingIcon = false,
+                showLeadingIcon = true,
+                leadingIcon = {
+                    Icon(
+                        ImageVector.vectorResource(id = R.drawable.ic_github),
+                        contentDescription = stringResource(R.string.source_code_icon)
+                    )
+                }
+            )
+            SettingItem(
+                modifier = Modifier.height(64.dp),
+                title = stringResource(R.string.third_party_licenses),
+                description = stringResource(R.string.third_party_licenses_description),
                 onItemClick = onNavigationToLicense,
                 showTrailingIcon = true,
                 showLeadingIcon = true,
