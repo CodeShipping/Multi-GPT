@@ -31,8 +31,11 @@ fun ModelCard(
     onDelete: () -> Unit,
     onClick: () -> Unit,
     formatSize: (Long) -> String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    deviceTotalRam: Long = 0L
 ) {
+    val showRamWarning = deviceTotalRam > 0 && model.performance.memoryRequired > deviceTotalRam
+
     Card(
         onClick = onClick,
         modifier = modifier
@@ -106,6 +109,37 @@ fun ModelCard(
                     icon = Icons.Outlined.Speed,
                     label = "${model.performance.tokensPerSecond.toInt()} tok/s"
                 )
+            }
+
+            // RAM Warning
+            if (showRamWarning) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Filled.Warning,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = stringResource(
+                                R.string.model_ram_warning,
+                                formatSize(model.performance.memoryRequired),
+                                formatSize(deviceTotalRam)
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))

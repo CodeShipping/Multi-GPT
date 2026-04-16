@@ -63,41 +63,29 @@ class LocalInferenceServiceImpl @Inject constructor(
                 val availableRamMB = (memInfo.availMem / (1024 * 1024)).toInt()
                 val modelSizeMB = (modelFile.length() / (1024 * 1024)).toInt()
                 
-                // ABSOLUTE REQUIREMENT: Device must have sufficient total RAM
-                // These models require consistent memory, not just "available" memory
+                // Warn if device total RAM is low for this model size
                 val requiredTotalRam = when {
-                    modelSizeMB > 800 -> 8192  // 3B models need 8GB+
-                    modelSizeMB > 600 -> 6144  // 1B+ models need 6GB+
-                    else -> 4096               // 0.5B models need 4GB minimum
+                    modelSizeMB > 800 -> 8192
+                    modelSizeMB > 600 -> 6144
+                    else -> 4096
                 }
                 
                 if (totalRamMB < requiredTotalRam) {
-                    return@withContext Result.failure(
-                        IllegalStateException(
-                            "This device does not have enough RAM to run local AI models reliably. " +
-                            "Total RAM: ${totalRamMB}MB, Required: ${requiredTotalRam}MB. " +
-                            "Local AI requires devices with at least ${requiredTotalRam / 1024}GB of RAM. " +
-                            "Please use cloud-based models instead (OpenAI, Claude, Gemini, etc.)."
-                        )
+                    android.util.Log.w("LocalInference",
+                        "Device RAM (${totalRamMB}MB) is below recommended (${requiredTotalRam}MB) for this model. " +
+                        "Performance may be degraded or loading may fail."
                     )
                 }
                 
-                // CRITICAL: Pre-flight memory check before loading
-                // llama.cpp needs ~2-3x model size during inference
-                val minimumRequired = modelSizeMB + 300 // Model + 300MB headroom
+                // Warn if available memory is low
+                val minimumRequired = modelSizeMB + 300
                 if (memInfo.lowMemory) {
-                    return@withContext Result.failure(
-                        IllegalStateException("Device is in low memory state. Please close ALL other apps and try again.")
-                    )
+                    android.util.Log.w("LocalInference", "Device is in low memory state. Model loading may fail.")
                 }
                 if (availableRamMB < minimumRequired) {
-                    return@withContext Result.failure(
-                        IllegalStateException(
-                            "Not enough memory available to load this model. " +
-                            "Available: ${availableRamMB}MB, Required: ~${minimumRequired}MB. " +
-                            "Please close ALL other apps, then try again. " +
-                            "If the problem persists, your device may not have enough total RAM (need ${requiredTotalRam / 1024}GB)."
-                        )
+                    android.util.Log.w("LocalInference",
+                        "Available memory (${availableRamMB}MB) is below recommended (~${minimumRequired}MB). " +
+                        "Model loading may fail or be slow."
                     )
                 }
                 
@@ -126,14 +114,12 @@ class LocalInferenceServiceImpl @Inject constructor(
                 
                 android.util.Log.d("LocalInference", "Effective available for buffers: ${effectiveAvailable}MB (headroom: ${headroomNeeded}MB)")
                 
-                // CRITICAL CHECK: Refuse to load if not enough memory
+                // Warn if effective available memory is very low
                 if (effectiveAvailable < 50) {
-                    return@withContext Result.failure(
-                        IllegalStateException(
-                            "Not enough memory to run this model. " +
-                            "Available: ${availableRamMB}MB, Model: ${modelSizeMB}MB, Need: ${modelSizeMB + headroomNeeded + 50}MB. " +
-                            "Please close other apps or use a smaller model."
-                        )
+                    android.util.Log.w("LocalInference",
+                        "Very low effective memory (${effectiveAvailable}MB). " +
+                        "Available: ${availableRamMB}MB, Model: ${modelSizeMB}MB, Headroom: ${headroomNeeded}MB. " +
+                        "Model may fail to load or crash during inference."
                     )
                 }
                 
@@ -230,15 +216,14 @@ class LocalInferenceServiceImpl @Inject constructor(
         
         android.util.Log.d("LocalInference", "generateChatCompletion started")
         
-        // PRE-FLIGHT CHECK: Verify we have enough memory BEFORE calling native code
+        // PRE-FLIGHT CHECK: Log memory state before calling native code
         val activityManager = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
         val memInfo = android.app.ActivityManager.MemoryInfo()
         activityManager.getMemoryInfo(memInfo)
         
         if (memInfo.lowMemory || (memInfo.availMem / (1024 * 1024)) < 400) {
-            throw IllegalStateException(
-                "Not enough memory for generation. Available: ${memInfo.availMem / (1024 * 1024)}MB. " +
-                "Please close other apps and try again."
+            android.util.Log.w("LocalInference",
+                "Low memory before generation: ${memInfo.availMem / (1024 * 1024)}MB available. May crash."
             )
         }
         
@@ -619,6 +604,11 @@ class LocalInferenceServiceImpl @Inject constructor(
                 android.util.Log.d("LocalInference", "Using fallback ChatML format")
                 formatChatMLPrompt(messages)
             }
+            combined.contains("gemma-4") || combined.contains("gemma4") || 
+            combined.contains("gemma_4") -> {
+                android.util.Log.d("LocalInference", "Using fallback Gemma 4 format")
+                formatGemma4Prompt(messages)
+            }
             combined.contains("gemma") -> {
                 android.util.Log.d("LocalInference", "Using fallback Gemma format")
                 formatGemmaPrompt(messages)
@@ -782,7 +772,7 @@ class LocalInferenceServiceImpl @Inject constructor(
     }
     
     /**
-     * Gemma format.
+     * Gemma format (Gemma 2 and earlier).
      */
     private fun formatGemmaPrompt(messages: List<ChatMessage>): String {
         return buildString {
@@ -796,11 +786,38 @@ class LocalInferenceServiceImpl @Inject constructor(
                         append("<start_of_turn>model\n${message.content}<end_of_turn>\n")
                     }
                     ChatRole.SYSTEM -> {
-                        // Gemma doesn't have explicit system
+                        // Gemma 2 doesn't have explicit system
                     }
                 }
             }
             append("<start_of_turn>model\n")
+        }
+    }
+    
+    /**
+     * Gemma 4 format (uses <|turn> / <turn|> markers and supports system role).
+     */
+    private fun formatGemma4Prompt(messages: List<ChatMessage>): String {
+        return buildString {
+            append("<bos>")
+            val hasSystem = messages.any { it.role == ChatRole.SYSTEM }
+            if (!hasSystem) {
+                append("<|turn>system\nYou are a helpful AI assistant.<turn|>\n")
+            }
+            for (message in messages) {
+                when (message.role) {
+                    ChatRole.SYSTEM -> {
+                        append("<|turn>system\n${message.content}<turn|>\n")
+                    }
+                    ChatRole.USER -> {
+                        append("<|turn>user\n${message.content}<turn|>\n")
+                    }
+                    ChatRole.ASSISTANT -> {
+                        append("<|turn>model\n${message.content}<turn|>\n")
+                    }
+                }
+            }
+            append("<|turn>model\n")
         }
     }
     

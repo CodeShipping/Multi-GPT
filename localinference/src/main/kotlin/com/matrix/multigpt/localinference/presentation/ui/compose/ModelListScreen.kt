@@ -302,6 +302,13 @@ private fun ModelListContent(
     onEvent: (ModelListEvent) -> Unit,
     formatSize: (Long) -> String
 ) {
+    val activityManager = androidx.compose.ui.platform.LocalContext.current
+        .getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+    val memInfo = remember {
+        android.app.ActivityManager.MemoryInfo().also { activityManager.getMemoryInfo(it) }
+    }
+    val deviceTotalRam = memInfo.totalMem
+
     LazyColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -332,7 +339,8 @@ private fun ModelListContent(
                     onCancel = { onEvent(ModelListEvent.CancelDownload(model.id)) },
                     onDelete = { onEvent(ModelListEvent.DeleteModel(model.id)) },
                     onClick = { onEvent(ModelListEvent.SelectModel(model.id)) },
-                    formatSize = formatSize
+                    formatSize = formatSize,
+                    deviceTotalRam = deviceTotalRam
                 )
             }
         }

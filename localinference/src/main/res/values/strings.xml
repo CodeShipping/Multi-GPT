@@ -44,6 +44,7 @@
     <string name="model_memory_required">Memory: %s</string>
     <string name="model_tokens_per_second">Speed: %.1f tok/s</string>
     <string name="model_recommended">Recommended</string>
+    <string name="model_ram_warning">⚠ This model needs %1$s RAM. Your device has %2$s. It may run slowly or fail to load.</string>
 
     <!-- Download States -->
     <string name="download_not_downloaded">Not downloaded</string>

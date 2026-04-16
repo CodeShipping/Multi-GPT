@@ -200,6 +200,14 @@ class ModelCatalogServiceImpl @Inject constructor() : ModelCatalogService {
                 developer = "Microsoft",
                 license = "MIT",
                 websiteUrl = "https://azure.microsoft.com/en-us/products/phi-3"
+            ),
+            ModelFamilyDto(
+                id = "gemma4",
+                name = "Gemma 4",
+                description = "Google's latest multimodal model family, optimized for on-device deployment.",
+                developer = "Google",
+                license = "Apache 2.0",
+                websiteUrl = "https://ai.google.dev/gemma"
             )
         )
     }
@@ -296,6 +304,28 @@ class ModelCatalogServiceImpl @Inject constructor() : ModelCatalogService {
                 contextLength = 128000,
                 familyId = "phi",
                 isRecommended = false,
+                isEnabled = true
+            ),
+            LocalModelDto(
+                id = "gemma4-e2b-q4",
+                name = "Gemma 4 E2B (Q4)",
+                description = "Google's latest on-device model with strong reasoning and multilingual capabilities.",
+                size = 3_460_000_000L,
+                downloadUrl = "https://huggingface.co/bartowski/google_gemma-4-E2B-it-GGUF/resolve/main/google_gemma-4-E2B-it-Q4_K_M.gguf",
+                fileName = "gemma-4-e2b-it-q4.gguf",
+                performance = ModelPerformanceDto(
+                    tokensPerSecond = 15f,
+                    memoryRequired = 4_000_000_000L,
+                    cpuIntensive = true,
+                    gpuAccelerated = true,
+                    rating = "BALANCED"
+                ),
+                useCases = listOf("CHAT", "CODING", "CREATIVE", "GENERAL", "MATH"),
+                quantization = "Q4_K_M",
+                parameters = "2B",
+                contextLength = 32768,
+                familyId = "gemma4",
+                isRecommended = true,
                 isEnabled = true
             )
         )

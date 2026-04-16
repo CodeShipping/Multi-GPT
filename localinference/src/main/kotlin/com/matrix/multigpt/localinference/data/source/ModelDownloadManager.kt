@@ -112,7 +112,8 @@ class ModelDownloadManager @Inject constructor(
                     
                     try {
                         file.seek(downloadedBytes)
-                        val buffer = ByteArray(8192)
+                        val buffer = ByteArray(1024 * 1024) // 1MB buffer for large model files
+                        var lastUpdateTime = System.currentTimeMillis()
                         
                         while (!channel.isClosedForRead) {
                             // Check for pause
@@ -136,18 +137,30 @@ class ModelDownloadManager @Inject constructor(
                                 file.write(buffer, 0, bytesRead)
                                 downloadedBytes += bytesRead
                                 
-                                updateState(
-                                    modelId = modelId,
-                                    status = ModelStatus.DOWNLOADING,
-                                    downloadedBytes = downloadedBytes,
-                                    totalBytes = totalBytes
-                                )
+                                // Throttle state updates to at most every 250ms
+                                val now = System.currentTimeMillis()
+                                if (now - lastUpdateTime >= 250) {
+                                    lastUpdateTime = now
+                                    updateState(
+                                        modelId = modelId,
+                                        status = ModelStatus.DOWNLOADING,
+                                        downloadedBytes = downloadedBytes,
+                                        totalBytes = totalBytes
+                                    )
+                                }
                             }
                         }
                         
                         // Download complete - rename temp file
                         file.close()
                         if (downloadedBytes >= totalBytes - 1) {
+                            // Final progress update
+                            updateState(
+                                modelId = modelId,
+                                status = ModelStatus.DOWNLOADING,
+                                downloadedBytes = downloadedBytes,
+                                totalBytes = totalBytes
+                            )
                             tempFile.renameTo(outputFile)
                             updateState(
                                 modelId = modelId,

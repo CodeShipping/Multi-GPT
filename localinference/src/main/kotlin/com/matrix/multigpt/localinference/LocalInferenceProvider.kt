@@ -254,24 +254,21 @@ class LocalInferenceProvider private constructor(context: Context) {
             
             android.util.Log.d("LocalProvider", "Pre-generation memory check: ${availableMB}MB available, lowMemory=$isLowMemory")
             
-            // Critical thresholds - if below these, don't even attempt generation
-            return when {
+            when {
                 isLowMemory -> {
-                    "Device is in low memory state. Please close other apps and try again."
+                    android.util.Log.w("LocalProvider", "Device is in low memory state. Generation may fail.")
                 }
                 availableMB < 300 -> {
-                    "Not enough memory available (${availableMB}MB). Need at least 300MB free. Please close other apps."
+                    android.util.Log.w("LocalProvider", "Very low memory: ${availableMB}MB. Generation may fail.")
                 }
                 availableMB < 500 -> {
-                    // Borderline - warn but allow
                     android.util.Log.w("LocalProvider", "Memory borderline: ${availableMB}MB. Generation may fail.")
-                    null // Allow attempt but may fail
                 }
-                else -> null // OK
             }
+            return null // Always allow attempt
         } catch (e: Exception) {
             android.util.Log.w("LocalProvider", "Could not check memory: ${e.message}")
-            return null // Allow attempt if we can't check
+            return null
         }
     }
     
