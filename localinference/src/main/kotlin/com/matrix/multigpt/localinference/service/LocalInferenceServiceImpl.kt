@@ -196,7 +196,7 @@ class LocalInferenceServiceImpl @Inject constructor(
                     .getMemoryInfo(memInfo2)
                 val availMB = memInfo2.availMem / (1024 * 1024)
                 val totalMB = memInfo2.totalMem / (1024 * 1024)
-                val hint = if (memInfo2.lowMemory || availMB < modelFile.length() / (1024 * 1024) + 300) {
+                val hint = if (memInfo2.lowMemory || availMB < File(modelPath).length() / (1024 * 1024) + 300) {
                     "Your device is low on memory (${availMB}MB free of ${totalMB}MB). " +
                     "Close other apps and try again, or use a smaller model."
                 } else {
