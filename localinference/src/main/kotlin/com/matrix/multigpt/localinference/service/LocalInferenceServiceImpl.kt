@@ -191,7 +191,20 @@ class LocalInferenceServiceImpl @Inject constructor(
                 Result.success(true)
             } catch (e: Exception) {
                 android.util.Log.e("LocalInference", "Failed to load model", e)
-                Result.failure(e)
+                val memInfo2 = android.app.ActivityManager.MemoryInfo()
+                (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager)
+                    .getMemoryInfo(memInfo2)
+                val availMB = memInfo2.availMem / (1024 * 1024)
+                val totalMB = memInfo2.totalMem / (1024 * 1024)
+                val hint = if (memInfo2.lowMemory || availMB < modelFile.length() / (1024 * 1024) + 300) {
+                    "Your device is low on memory (${availMB}MB free of ${totalMB}MB). " +
+                    "Close other apps and try again, or use a smaller model."
+                } else {
+                    "This model may not be compatible with your device."
+                }
+                Result.failure(IllegalStateException(
+                    "Failed to load model: $hint", e
+                ))
             }
         }
     }
