@@ -132,6 +132,9 @@ dependencies {
     // AdMob
     implementation(libs.play.services.ads)
 
+    // Google Play Billing (in-app purchases)
+    implementation(libs.play.billing)
+
     // Play Feature Delivery
     implementation(libs.play.feature.delivery)
     implementation(libs.play.feature.delivery.ktx)

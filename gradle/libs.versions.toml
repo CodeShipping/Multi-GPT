@@ -22,6 +22,7 @@ serialization = "1.7.3" # Should not update due to kotlin version
 splashscreen = "1.0.1"
 room = "2.6.1"
 admob = "23.5.0"
+billing = "7.1.1"
 securityCrypto = "1.0.0"
 playFeatureDelivery = "2.1.0"
 llamaKotlin = "0.1.3"
@@ -69,6 +70,7 @@ room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "room" }
 androidx-lifecycle-runtime-compose-android = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose-android", version.ref = "lifecycleRuntime" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 play-services-ads = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "admob" }
+play-billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
 play-feature-delivery = { group = "com.google.android.play", name = "feature-delivery", version.ref = "playFeatureDelivery" }
 play-feature-delivery-ktx = { group = "com.google.android.play", name = "feature-delivery-ktx", version.ref = "playFeatureDelivery" }
 llama-kotlin-android = { group = "org.codeshipping", name = "llama-kotlin-android", version.ref = "llamaKotlin" }

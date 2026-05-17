@@ -120,6 +120,29 @@
     <string name="about_description">Version, License, Feedback</string>
     <string name="local_ai_models">Local AI Models</string>
     <string name="local_ai_description">Run AI models on your device for offline, private chat</string>
+
+    <!-- Upgrade / Remove Ads -->
+    <string name="remove_ads">Remove Ads</string>
+    <string name="remove_ads_description">One-time purchase \u2014 enjoy MultiGPT without ads</string>
+    <string name="remove_ads_purchased">Ads removed \u2713</string>
+    <string name="upgrade_title">Remove Ads</string>
+    <string name="upgrade_subtitle">Enjoy MultiGPT without any banners or interstitials \u2014 forever.</string>
+    <string name="upgrade_benefits_header">What you get</string>
+    <string name="upgrade_benefit_no_banners">No banner ads on any screen</string>
+    <string name="upgrade_benefit_no_interstitials">No full-screen interstitial ads</string>
+    <string name="upgrade_benefit_one_time">One-time payment \u2014 no subscription</string>
+    <string name="upgrade_benefit_supports">Supports development of new features</string>
+    <string name="upgrade_buy">Remove ads</string>
+    <string name="upgrade_buy_loading">Loading price\u2026</string>
+    <string name="upgrade_already_purchased">Purchased \u2713</string>
+    <string name="upgrade_restore">Restore purchase</string>
+    <string name="upgrade_thanks">Thank you! Ads removed \u2728</string>
+    <string name="upgrade_restore_success">Purchase restored</string>
+    <string name="upgrade_restore_none">No previous purchase found</string>
+    <string name="upgrade_purchase_failed">Purchase failed. Please try again.</string>
+    <string name="chat_remove_ads_prompt">Enjoying MultiGPT? Remove ads forever</string>
+    <string name="chat_remove_ads_action">Upgrade</string>
+
     <string name="version">Version</string>
     <string name="license">License</string>
     <string name="github" translatable="false">GitHub</string>

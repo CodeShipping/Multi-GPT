@@ -29,6 +29,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.WorkspacePremium
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
@@ -70,6 +71,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.matrix.multigpt.R
+import com.matrix.multigpt.billing.BillingManager
 import com.matrix.multigpt.data.database.entity.ChatRoom
 import com.matrix.multigpt.data.dto.Platform
 import com.matrix.multigpt.data.model.ApiType
@@ -84,11 +86,16 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarResult
 
+// Tracks whether the home-screen "Remove Ads" snackbar has been shown this app session.
+// Reset on process death; shown at most once per launch.
+private var removeAdsSnackbarShownThisSession: Boolean = false
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel = hiltViewModel(),
     settingOnClick: () -> Unit,
+    upgradeOnClick: () -> Unit = {},
     onExistingChatClick: (ChatRoom) -> Unit,
     navigateToNewChat: (enabledPlatforms: List<ApiType>) -> Unit
 ) {
@@ -117,6 +124,35 @@ fun HomeScreen(
     PreloadInterstitialAd()
     PreloadInterstitialAd(R.string.new_chat_interstitial)
 
+    // Show the Remove Ads promotional snackbar once per app session, only when the user
+    // hasn't already purchased ad-free.
+    LaunchedEffect(Unit) {
+        if (BillingManager.isAdFree(context)) {
+            android.util.Log.d("HomeScreen", "RemoveAds snackbar skipped — user is ad-free")
+            return@LaunchedEffect
+        }
+        // In DEBUG, ignore the session flag so it can be re-tested by re-entering the screen
+        if (!com.matrix.multigpt.BuildConfig.DEBUG && removeAdsSnackbarShownThisSession) {
+            android.util.Log.d("HomeScreen", "RemoveAds snackbar skipped — already shown this session")
+            return@LaunchedEffect
+        }
+        val delayMs = if (com.matrix.multigpt.BuildConfig.DEBUG) 3_000L else 8_000L
+        android.util.Log.d("HomeScreen", "RemoveAds snackbar will show in ${delayMs / 1000}s")
+        kotlinx.coroutines.delay(delayMs)
+        if (BillingManager.isAdFree(context)) return@LaunchedEffect
+        removeAdsSnackbarShownThisSession = true
+        android.util.Log.d("HomeScreen", "Showing RemoveAds snackbar now")
+        val result = snackbarHostState.showSnackbar(
+            message = context.getString(R.string.chat_remove_ads_prompt),
+            actionLabel = context.getString(R.string.chat_remove_ads_action),
+            duration = SnackbarDuration.Long,
+            withDismissAction = true
+        )
+        if (result == SnackbarResult.ActionPerformed) {
+            upgradeOnClick()
+        }
+    }
+
     BackHandler(enabled = chatListState.isSelectionMode) {
         homeViewModel.disableSelectionMode()
     }
@@ -139,7 +175,8 @@ fun HomeScreen(
                 },
                 navigationOnClick = {
                     homeViewModel.disableSelectionMode()
-                }
+                },
+                upgradeOnClick = upgradeOnClick
             )
         },
         floatingActionButton = {
@@ -298,8 +335,11 @@ fun HomeTopAppBar(
     selectedChats: Int,
     scrollBehavior: TopAppBarScrollBehavior,
     actionOnClick: () -> Unit,
-    navigationOnClick: () -> Unit
+    navigationOnClick: () -> Unit,
+    upgradeOnClick: () -> Unit = {}
 ) {
+    val context = LocalContext.current
+    val isAdFree = BillingManager.isAdFree(context)
     TopAppBar(
         colors = TopAppBarDefaults.topAppBarColors(
             scrolledContainerColor = if (isSelectionMode) MaterialTheme.colorScheme.primaryContainer else Color.Unspecified,
@@ -352,6 +392,19 @@ fun HomeTopAppBar(
                     )
                 }
             } else {
+                // Remove Ads — shown only when user hasn't already purchased ad-free
+                if (!isAdFree) {
+                    IconButton(
+                        modifier = Modifier.padding(4.dp),
+                        onClick = upgradeOnClick
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.WorkspacePremium,
+                            contentDescription = stringResource(R.string.remove_ads),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
                 IconButton(
                     modifier = Modifier.padding(4.dp),
                     onClick = actionOnClick

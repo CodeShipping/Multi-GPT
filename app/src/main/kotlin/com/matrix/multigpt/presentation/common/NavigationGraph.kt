@@ -32,6 +32,7 @@ import com.matrix.multigpt.presentation.ui.setup.SetupViewModel
 import com.matrix.multigpt.presentation.ui.setup.TokenInputScreen
 import com.matrix.multigpt.presentation.ui.startscreen.StartScreen
 import com.matrix.multigpt.presentation.ui.tour.FeatureTourScreen
+import com.matrix.multigpt.presentation.ui.upgrade.UpgradeScreen
 
 @Composable
 fun SetupNavGraph(navController: NavHostController) {
@@ -235,6 +236,7 @@ fun NavGraphBuilder.homeScreenNavigation(navController: NavHostController) {
     composable(Route.CHAT_LIST) {
         HomeScreen(
             settingOnClick = { navController.navigate(Route.SETTING_ROUTE) { launchSingleTop = true } },
+            upgradeOnClick = { navController.navigate(Route.UPGRADE) },
             onExistingChatClick = { chatRoom ->
                 val enabledPlatformString = chatRoom.enabledPlatform.joinToString(",") { v -> v.name }
                 navController.navigate(
@@ -291,7 +293,8 @@ fun NavGraphBuilder.settingNavigation(navController: NavHostController) {
                     }
                 },
                 onNavigateToAboutPage = { navController.navigate(Route.ABOUT_PAGE) },
-                onNavigateToLocalAI = { navController.navigate(Route.LOCAL_AI_ENTRY) }
+                onNavigateToLocalAI = { navController.navigate(Route.LOCAL_AI_ENTRY) },
+                onNavigateToUpgrade = { navController.navigate(Route.UPGRADE) }
             )
         }
         composable(Route.OPENAI_SETTINGS) {
@@ -362,6 +365,9 @@ fun NavGraphBuilder.settingNavigation(navController: NavHostController) {
         }
         composable(Route.LICENSE) {
             LicenseScreen(onNavigationClick = { navController.navigateUp() })
+        }
+        composable(Route.UPGRADE) {
+            UpgradeScreen(onNavigateBack = { navController.navigateUp() })
         }
         composable(Route.LOCAL_AI_ENTRY) {
             LocalAIEntryScreen(

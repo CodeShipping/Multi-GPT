@@ -3,14 +3,16 @@ package com.matrix.multigpt.presentation.common
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.matrix.multigpt.R
+import com.matrix.multigpt.billing.BillingManager
 
 /**
- * Banner ad composable that can be placed at the bottom of screens
+ * Banner ad composable. Renders nothing when the user has purchased ad-free.
  */
 @Composable
 fun BannerAd(
@@ -18,12 +20,15 @@ fun BannerAd(
     adUnitIdRes: Int = R.string.home_banner,
     adSize: AdSize = AdSize.BANNER
 ) {
+    val context = LocalContext.current
+    if (BillingManager.isAdFree(context)) return
+
     AndroidView(
         modifier = modifier.fillMaxWidth(),
-        factory = { context ->
-            AdView(context).apply {
+        factory = { ctx ->
+            AdView(ctx).apply {
                 setAdSize(adSize)
-                adUnitId = context.getString(adUnitIdRes)
+                adUnitId = ctx.getString(adUnitIdRes)
                 loadAd(AdRequest.Builder().build())
             }
         }
@@ -31,13 +36,16 @@ fun BannerAd(
 }
 
 /**
- * Large banner ad for bottom of screens with more space
+ * Large banner ad for screens with more vertical room.
  */
 @Composable
 fun LargeBannerAd(
     modifier: Modifier = Modifier,
     adUnitIdRes: Int = R.string.home_banner
 ) {
+    val context = LocalContext.current
+    if (BillingManager.isAdFree(context)) return
+
     BannerAd(
         modifier = modifier,
         adUnitIdRes = adUnitIdRes,
@@ -46,19 +54,22 @@ fun LargeBannerAd(
 }
 
 /**
- * Smart banner that adapts to screen size
+ * Smart banner that adapts to screen size.
  */
 @Composable
 fun SmartBannerAd(
     modifier: Modifier = Modifier,
     adUnitIdRes: Int = R.string.home_banner
 ) {
+    val context = LocalContext.current
+    if (BillingManager.isAdFree(context)) return
+
     AndroidView(
         modifier = modifier.fillMaxWidth(),
-        factory = { context ->
-            AdView(context).apply {
+        factory = { ctx ->
+            AdView(ctx).apply {
                 setAdSize(AdSize.SMART_BANNER)
-                adUnitId = context.getString(adUnitIdRes)
+                adUnitId = ctx.getString(adUnitIdRes)
                 loadAd(AdRequest.Builder().build())
             }
         }
@@ -66,24 +77,28 @@ fun SmartBannerAd(
 }
 
 /**
- * Adaptive banner ad that adjusts to screen width
+ * Adaptive banner ad that adjusts to screen width. Recommended default.
+ * Renders nothing when the user has purchased ad-free.
  */
 @Composable
 fun AdaptiveBannerAd(
     modifier: Modifier = Modifier,
     adUnitIdRes: Int = R.string.home_banner
 ) {
+    val context = LocalContext.current
+    if (BillingManager.isAdFree(context)) return
+
     AndroidView(
         modifier = modifier.fillMaxWidth(),
-        factory = { context ->
-            val displayMetrics = context.resources.displayMetrics
+        factory = { ctx ->
+            val displayMetrics = ctx.resources.displayMetrics
             val adWidthPixels = displayMetrics.widthPixels
             val density = displayMetrics.density
             val adWidth = (adWidthPixels / density).toInt()
-            
-            AdView(context).apply {
-                setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, adWidth))
-                adUnitId = context.getString(adUnitIdRes)
+
+            AdView(ctx).apply {
+                setAdSize(AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(ctx, adWidth))
+                adUnitId = ctx.getString(adUnitIdRes)
                 loadAd(AdRequest.Builder().build())
             }
         }

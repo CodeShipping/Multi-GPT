@@ -32,6 +32,7 @@ object Route {
     const val LOCAL_SETTINGS = "local_settings"
     const val ABOUT_PAGE = "about"
     const val LICENSE = "license"
+    const val UPGRADE = "upgrade"
     
     // Local AI
     const val LOCAL_AI_ENTRY = "local_ai_entry"

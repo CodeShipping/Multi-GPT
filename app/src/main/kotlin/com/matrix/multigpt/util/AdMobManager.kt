@@ -12,6 +12,7 @@ import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.matrix.multigpt.R
+import com.matrix.multigpt.billing.BillingManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -56,6 +57,9 @@ object AdMobManager {
         onAdLoaded: () -> Unit = {},
         onAdFailed: (String) -> Unit = {}
     ) {
+        // Skip entirely if user has purchased ad-free
+        if (BillingManager.isAdFree(context)) return
+
         if (loadingFlags[adUnitIdRes] == true) return
         if (interstitialAds[adUnitIdRes] != null) return
 
@@ -92,6 +96,12 @@ object AdMobManager {
         @StringRes adUnitIdRes: Int,
         onAdDismissed: () -> Unit = {}
     ) {
+        // Ad-free users skip the ad and continue immediately
+        if (BillingManager.isAdFree(activity)) {
+            onAdDismissed()
+            return
+        }
+
         val ad = interstitialAds[adUnitIdRes]
         if (ad != null) {
             ad.fullScreenContentCallback = object : com.google.android.gms.ads.FullScreenContentCallback() {
@@ -163,7 +173,7 @@ fun PreloadInterstitialAd(
     val context = LocalContext.current
 
     DisposableEffect(adUnitIdRes) {
-        if (!AdMobManager.isInterstitialAdReady(adUnitIdRes)) {
+        if (!BillingManager.isAdFree(context) && !AdMobManager.isInterstitialAdReady(adUnitIdRes)) {
             AdMobManager.loadInterstitialAd(context, adUnitIdRes)
         }
         onDispose { }

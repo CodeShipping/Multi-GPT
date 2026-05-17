@@ -24,12 +24,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.matrix.multigpt.R
+import com.matrix.multigpt.billing.BillingManager
 import com.matrix.multigpt.data.model.ApiType
 import com.matrix.multigpt.data.model.DynamicTheme
 import com.matrix.multigpt.data.model.ThemeMode
@@ -52,13 +54,16 @@ fun SettingScreen(
     onNavigationClick: () -> Unit,
     onNavigateToPlatformSetting: (ApiType) -> Unit,
     onNavigateToAboutPage: () -> Unit,
-    onNavigateToLocalAI: () -> Unit = {}
+    onNavigateToLocalAI: () -> Unit = {},
+    onNavigateToUpgrade: () -> Unit = {}
 ) {
     val scrollState = rememberScrollState()
     val scrollBehavior = pinnedExitUntilCollapsedScrollBehavior(
         canScroll = { scrollState.canScrollForward || scrollState.canScrollBackward }
     )
     val dialogState by settingViewModel.dialogState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val isAdFree = BillingManager.isAdFree(context)
 
     Scaffold(
         modifier = modifier
@@ -75,6 +80,12 @@ fun SettingScreen(
                 .padding(innerPadding)
                 .verticalScroll(scrollState)
         ) {
+            // Remove Ads / status — shown at top of settings for visibility
+            RemoveAdsSettingItem(
+                isAdFree = isAdFree,
+                onItemClick = onNavigateToUpgrade
+            )
+
             ThemeSetting { settingViewModel.openThemeDialog() }
             
             // Local AI Models - On-device inference (top priority, right after theme)
@@ -98,6 +109,24 @@ fun SettingScreen(
             }
         }
     }
+}
+
+@Composable
+private fun RemoveAdsSettingItem(
+    isAdFree: Boolean,
+    onItemClick: () -> Unit
+) {
+    SettingItem(
+        title = if (isAdFree) {
+            stringResource(R.string.remove_ads_purchased)
+        } else {
+            stringResource(R.string.remove_ads)
+        },
+        description = stringResource(R.string.remove_ads_description),
+        onItemClick = if (isAdFree) ({ /* already purchased — no-op */ }) else onItemClick,
+        showTrailingIcon = !isAdFree,
+        showLeadingIcon = false
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

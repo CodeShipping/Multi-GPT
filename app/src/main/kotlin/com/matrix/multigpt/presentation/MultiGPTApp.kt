@@ -5,6 +5,7 @@ import android.content.Context
 import com.google.android.gms.ads.MobileAds
 import com.google.firebase.FirebaseApp
 import com.matrix.multigpt.BuildConfig
+import com.matrix.multigpt.billing.BillingManager
 import com.matrix.multigpt.util.AdMobManager
 import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -22,7 +23,10 @@ class MultiGPTApp : Application() {
         // Initialize Firebase
         FirebaseApp.initializeApp(this)
 
-        // Initialize AdMob
+        // Initialize Google Play Billing — connects + caches entitlement state
+        BillingManager.init(this)
+
+        // Initialize AdMob (loads even if ad-free; banner/interstitial code skips serving)
         AdMobManager.initialize(this)
 
         // On debug builds, mark this device + emulator as a test device so AdMob
