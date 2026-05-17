@@ -15,6 +15,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.matrix.multigpt.R
+import com.matrix.multigpt.presentation.common.AdaptiveBannerAd
 import com.matrix.multigpt.util.FeatureInstallState
 
 /**
@@ -49,6 +51,12 @@ fun LocalAIEntryScreen(
                         )
                     }
                 }
+            )
+        },
+        bottomBar = {
+            AdaptiveBannerAd(
+                modifier = Modifier.fillMaxWidth(),
+                adUnitIdRes = R.string.local_ai_banner
             )
         }
     ) { paddingValues ->

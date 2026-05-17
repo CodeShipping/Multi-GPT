@@ -2,6 +2,7 @@ package com.matrix.multigpt.util
 
 import android.app.Activity
 import android.content.Context
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.platform.LocalContext
@@ -14,19 +15,28 @@ import com.matrix.multigpt.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * Manager for AdMob initialization and ad operations
+ * Manager for AdMob initialization and ad operations.
+ * Supports multiple interstitial ad units keyed by their string resource id,
+ * so different placements (setup-complete, new-chat, etc.) don't clobber each other.
  */
 object AdMobManager {
     private val isInitialized = AtomicBoolean(false)
-    private var interstitialAd: InterstitialAd? = null
-    private var isLoadingInterstitial = false
+
+    // Per-ad-unit interstitial cache and loading flags
+    private val interstitialAds = ConcurrentHashMap<Int, InterstitialAd>()
+    private val loadingFlags = ConcurrentHashMap<Int, Boolean>()
+
+    // Frequency counter for "show every Nth tap" use-cases (e.g. new-chat interstitial)
+    private val newChatTapCount = AtomicInteger(0)
 
     /**
-     * Initialize AdMob SDK
-     * Should be called in Application.onCreate()
+     * Initialize AdMob SDK.
+     * Should be called in Application.onCreate().
      */
     fun initialize(context: Context) {
         if (isInitialized.compareAndSet(false, true)) {
@@ -37,12 +47,19 @@ object AdMobManager {
     }
 
     /**
-     * Load an interstitial ad
+     * Load an interstitial ad for the given ad unit res id.
+     * No-op if already loaded or currently loading.
      */
-    fun loadInterstitialAd(context: Context, adUnitIdRes: Int, onAdLoaded: () -> Unit = {}, onAdFailed: (String) -> Unit = {}) {
-        if (isLoadingInterstitial) return
-        
-        isLoadingInterstitial = true
+    fun loadInterstitialAd(
+        context: Context,
+        @StringRes adUnitIdRes: Int,
+        onAdLoaded: () -> Unit = {},
+        onAdFailed: (String) -> Unit = {}
+    ) {
+        if (loadingFlags[adUnitIdRes] == true) return
+        if (interstitialAds[adUnitIdRes] != null) return
+
+        loadingFlags[adUnitIdRes] = true
         val adRequest = AdRequest.Builder().build()
         val adUnitId = context.getString(adUnitIdRes)
 
@@ -52,14 +69,14 @@ object AdMobManager {
             adRequest,
             object : InterstitialAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    isLoadingInterstitial = false
-                    interstitialAd = null
+                    loadingFlags[adUnitIdRes] = false
+                    interstitialAds.remove(adUnitIdRes)
                     onAdFailed(adError.message)
                 }
 
                 override fun onAdLoaded(ad: InterstitialAd) {
-                    isLoadingInterstitial = false
-                    interstitialAd = ad
+                    loadingFlags[adUnitIdRes] = false
+                    interstitialAds[adUnitIdRes] = ad
                     onAdLoaded()
                 }
             }
@@ -67,20 +84,27 @@ object AdMobManager {
     }
 
     /**
-     * Show interstitial ad if loaded, load if not available
+     * Show interstitial ad if loaded; if not, kick off a load and call onAdDismissed
+     * immediately so the calling flow doesn't block.
      */
-    fun showInterstitialAd(activity: Activity, adUnitIdRes: Int, onAdDismissed: () -> Unit = {}) {
-        interstitialAd?.let { ad ->
+    fun showInterstitialAd(
+        activity: Activity,
+        @StringRes adUnitIdRes: Int,
+        onAdDismissed: () -> Unit = {}
+    ) {
+        val ad = interstitialAds[adUnitIdRes]
+        if (ad != null) {
             ad.fullScreenContentCallback = object : com.google.android.gms.ads.FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
-                    interstitialAd = null
+                    interstitialAds.remove(adUnitIdRes)
                     onAdDismissed()
-                    // Preload next ad
+                    // Preload next ad of the same unit
                     loadInterstitialAd(activity, adUnitIdRes)
                 }
 
                 override fun onAdFailedToShowFullScreenContent(adError: com.google.android.gms.ads.AdError) {
-                    interstitialAd = null
+                    interstitialAds.remove(adUnitIdRes)
+                    onAdDismissed()
                 }
 
                 override fun onAdShowedFullScreenContent() {
@@ -88,21 +112,31 @@ object AdMobManager {
                 }
             }
             ad.show(activity)
-        } ?: run {
-            // Ad not loaded, reload for next time
+        } else {
+            // Ad not loaded, reload for next time and let the caller continue
             loadInterstitialAd(activity, adUnitIdRes)
             onAdDismissed()
         }
     }
 
     /**
-     * Check if interstitial ad is ready
+     * Check if a specific interstitial ad unit is loaded and ready to show.
      */
-    fun isInterstitialAdReady(): Boolean = interstitialAd != null
+    fun isInterstitialAdReady(@StringRes adUnitIdRes: Int): Boolean =
+        interstitialAds[adUnitIdRes] != null
+
+    /**
+     * Increments the new-chat tap counter; returns true on every Nth tap (default every 4th).
+     * Caller should preload the new-chat interstitial in advance and only show when this returns true.
+     */
+    fun shouldShowNewChatInterstitial(every: Int = 4): Boolean {
+        val count = newChatTapCount.incrementAndGet()
+        return count > 0 && count % every == 0
+    }
 }
 
 /**
- * Frequency limiter for ads
+ * Frequency limiter for ads (time-based)
  */
 class AdFrequencyLimiter {
     private var lastInterstitialTime: Long = 0
@@ -119,15 +153,18 @@ class AdFrequencyLimiter {
 }
 
 /**
- * Composable to preload interstitial ad
+ * Composable to preload an interstitial ad. Defaults to the setup-complete interstitial
+ * for backward compatibility; pass a different ad unit res id to preload other slots.
  */
 @Composable
-fun PreloadInterstitialAd() {
+fun PreloadInterstitialAd(
+    @StringRes adUnitIdRes: Int = R.string.setup_complete_interstitial
+) {
     val context = LocalContext.current
-    
-    DisposableEffect(Unit) {
-        if (!AdMobManager.isInterstitialAdReady()) {
-            AdMobManager.loadInterstitialAd(context, R.string.setup_complete_interstitial)
+
+    DisposableEffect(adUnitIdRes) {
+        if (!AdMobManager.isInterstitialAdReady(adUnitIdRes)) {
+            AdMobManager.loadInterstitialAd(context, adUnitIdRes)
         }
         onDispose { }
     }

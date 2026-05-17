@@ -22,6 +22,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.matrix.multigpt.R
 import com.matrix.multigpt.data.dto.Platform
+import com.matrix.multigpt.presentation.common.AdaptiveBannerAd
 import com.matrix.multigpt.presentation.common.PlatformCheckBoxItem
 import com.matrix.multigpt.presentation.common.PrimaryLongButton
 import com.matrix.multigpt.presentation.common.Route
@@ -40,7 +41,13 @@ fun SelectPlatformScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = { SetupAppBar(onBackAction) }
+        topBar = { SetupAppBar(onBackAction) },
+        bottomBar = {
+            AdaptiveBannerAd(
+                modifier = Modifier.fillMaxWidth(),
+                adUnitIdRes = R.string.setup_banner
+            )
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier

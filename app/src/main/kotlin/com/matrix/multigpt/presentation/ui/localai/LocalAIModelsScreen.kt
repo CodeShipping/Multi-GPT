@@ -97,6 +97,12 @@ fun LocalAIModelsScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            com.matrix.multigpt.presentation.common.AdaptiveBannerAd(
+                modifier = Modifier.fillMaxWidth(),
+                adUnitIdRes = com.matrix.multigpt.R.string.local_ai_banner
+            )
         }
     ) { paddingValues ->
         Column(

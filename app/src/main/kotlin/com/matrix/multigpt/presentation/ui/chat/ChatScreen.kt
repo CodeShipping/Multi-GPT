@@ -98,6 +98,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.matrix.multigpt.R
 import com.matrix.multigpt.data.database.entity.Message
 import com.matrix.multigpt.data.model.ApiType
+import com.matrix.multigpt.presentation.common.AdaptiveBannerAd
 import com.matrix.multigpt.util.DefaultHashMap
 import com.matrix.multigpt.util.multiScrollStateSaver
 import java.io.File
@@ -403,6 +404,12 @@ fun ChatScreen(
                 }
             }
         }
+
+        // Banner ad above the input box
+        AdaptiveBannerAd(
+            modifier = Modifier.fillMaxWidth(),
+            adUnitIdRes = R.string.chat_banner
+        )
 
         // Bottom input box - always at bottom, above keyboard
         ChatInputBox(

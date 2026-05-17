@@ -113,8 +113,9 @@ fun HomeScreen(
         }
     }
 
-    // Preload interstitial ad for later use
+    // Preload interstitial ads for later use
     PreloadInterstitialAd()
+    PreloadInterstitialAd(R.string.new_chat_interstitial)
 
     BackHandler(enabled = chatListState.isSelectionMode) {
         homeViewModel.disableSelectionMode()
@@ -186,8 +187,16 @@ fun HomeScreen(
                         enabledApiTypes.first()
                     }
                     
-                    // Navigate directly with the active provider
-                    navigateToNewChat(listOf(activeApiType))
+                    // Navigate to new chat — show interstitial every 4th tap if available
+                    val activity = context as? android.app.Activity
+                    val proceed: () -> Unit = { navigateToNewChat(listOf(activeApiType)) }
+                    if (activity != null && AdMobManager.shouldShowNewChatInterstitial(every = 4)) {
+                        AdMobManager.showInterstitialAd(activity, R.string.new_chat_interstitial) {
+                            proceed()
+                        }
+                    } else {
+                        proceed()
+                    }
                 }
             )
         },

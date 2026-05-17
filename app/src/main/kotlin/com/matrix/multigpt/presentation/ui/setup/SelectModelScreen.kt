@@ -47,6 +47,7 @@ import com.matrix.multigpt.data.ModelConstants.openaiModels
 import com.matrix.multigpt.data.dto.APIModel
 import com.matrix.multigpt.data.dto.ModelFetchResult
 import com.matrix.multigpt.data.model.ApiType
+import com.matrix.multigpt.presentation.common.AdaptiveBannerAd
 import com.matrix.multigpt.presentation.common.PrimaryLongButton
 import com.matrix.multigpt.presentation.common.RadioItem
 import com.matrix.multigpt.util.generateAnthropicModelList
@@ -131,7 +132,13 @@ fun SelectModelScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        topBar = { SetupAppBar(onBackAction) }
+        topBar = { SetupAppBar(onBackAction) },
+        bottomBar = {
+            AdaptiveBannerAd(
+                modifier = Modifier.fillMaxWidth(),
+                adUnitIdRes = R.string.setup_banner
+            )
+        }
     ) { innerPadding ->
         Column(
             modifier = Modifier
