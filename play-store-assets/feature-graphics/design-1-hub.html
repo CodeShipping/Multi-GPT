@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1024px; height: 500px; overflow: hidden; }
+  body {
+    font-family: -apple-system, "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
+    background:
+      radial-gradient(ellipse at 80% 20%, rgba(99,102,241,0.45) 0%, transparent 55%),
+      radial-gradient(ellipse at 15% 80%, rgba(20,184,166,0.35) 0%, transparent 55%),
+      linear-gradient(135deg, #0b1220 0%, #111827 60%, #0a0f1c 100%);
+    position: relative;
+    color: #fff;
+  }
+  .grid-bg {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask: radial-gradient(ellipse at center, #000 30%, transparent 75%);
+  }
+  .container {
+    position: relative; height: 100%;
+    display: flex; align-items: center; padding: 0 60px;
+  }
+  .left {
+    flex: 1.1;
+    display: flex; flex-direction: column; gap: 18px;
+    z-index: 2;
+  }
+  .badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    width: fit-content;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: rgba(99,102,241,0.15);
+    border: 1px solid rgba(99,102,241,0.4);
+    font-size: 14px; font-weight: 600; letter-spacing: 0.2px;
+    color: #c7d2fe;
+  }
+  .badge .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #34D399; box-shadow: 0 0 12px #34D399;
+  }
+  h1 {
+    font-size: 92px; font-weight: 800; letter-spacing: -2.5px;
+    line-height: 1; margin: 0;
+    background: linear-gradient(120deg, #ffffff 0%, #c7d2fe 60%, #34D399 110%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .tagline {
+    font-size: 26px; font-weight: 500; letter-spacing: -0.3px;
+    color: #cbd5e1; line-height: 1.25;
+    max-width: 520px;
+  }
+  .features {
+    display: flex; gap: 12px; margin-top: 6px; flex-wrap: wrap;
+  }
+  .chip {
+    font-size: 13px; font-weight: 600;
+    padding: 8px 14px; border-radius: 8px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #e5e7eb;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chip .swatch {
+    width: 8px; height: 8px; border-radius: 50%;
+  }
+  .right {
+    flex: 1; position: relative; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .hub {
+    position: relative;
+    width: 380px; height: 380px;
+  }
+  .center {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 110px; height: 110px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
+    box-shadow: 0 0 60px rgba(99,102,241,0.55), 0 12px 30px rgba(0,0,0,0.35);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 3;
+  }
+  .center::before, .center::after {
+    content: ''; position: absolute; border-radius: 50%;
+    background: rgba(99,102,241,0.4);
+  }
+  .center::before { width: 8px; height: 8px; top: 38px; left: 38px; }
+  .center::after { width: 8px; height: 8px; top: 38px; right: 38px; }
+  .center .mouth {
+    position: absolute; bottom: 36px;
+    width: 28px; height: 6px; border-radius: 999px;
+    background: rgba(99,102,241,0.4);
+  }
+  .node {
+    position: absolute;
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    box-shadow: 0 0 35px var(--glow), 0 8px 20px rgba(0,0,0,0.3);
+    z-index: 2;
+  }
+  .node.green  { background: #10B981; --glow: rgba(16,185,129,0.55);  top: 0;       left: 50%; transform: translate(-50%,0); }
+  .node.purple { background: #8B5CF6; --glow: rgba(139,92,246,0.55);  top: 50%;     left: 0;   transform: translate(0,-50%); }
+  .node.orange { background: #F59E0B; --glow: rgba(245,158,11,0.55);  top: 50%;     right: 0;  transform: translate(0,-50%); }
+  .node.blue   { background: #3B82F6; --glow: rgba(59,130,246,0.55);  bottom: 0;    left: 50%; transform: translate(-50%,0); }
+
+  .spokes { position: absolute; inset: 0; z-index: 1; }
+  .spoke {
+    position: absolute; top: 50%; left: 50%;
+    width: 130px; height: 4px; border-radius: 999px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.85), rgba(255,255,255,0.2));
+    transform-origin: left center;
+  }
+  .s1 { transform: translate(-2px,-2px) rotate(-90deg); }
+  .s2 { transform: translate(-2px,-2px) rotate(180deg); }
+  .s3 { transform: translate(-2px,-2px) rotate(0deg); }
+  .s4 { transform: translate(-2px,-2px) rotate(90deg); }
+
+  .ring {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    border-radius: 50%; pointer-events: none;
+  }
+  .ring.r1 { width: 260px; height: 260px; border: 1px dashed rgba(255,255,255,0.14); }
+  .ring.r2 { width: 340px; height: 340px; border: 1px dashed rgba(255,255,255,0.08); }
+</style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="container">
+    <div class="left">
+      <div class="badge"><span class="dot"></span>Open source · 100% free</div>
+      <h1>MultiAI</h1>
+      <div class="tagline">All AI in one chat.</div>
+      <div class="features">
+        <div class="chip"><span class="swatch" style="background:#10B981"></span>Cloud AI</div>
+        <div class="chip"><span class="swatch" style="background:#8B5CF6"></span>Local AI</div>
+        <div class="chip"><span class="swatch" style="background:#F59E0B"></span>Custom API</div>
+        <div class="chip"><span class="swatch" style="background:#3B82F6"></span>Multi-Model</div>
+      </div>
+    </div>
+    <div class="right">
+      <div class="hub">
+        <div class="ring r2"></div>
+        <div class="ring r1"></div>
+        <div class="spokes">
+          <div class="spoke s1"></div>
+          <div class="spoke s2"></div>
+          <div class="spoke s3"></div>
+          <div class="spoke s4"></div>
+        </div>
+        <div class="node green"></div>
+        <div class="node purple"></div>
+        <div class="node orange"></div>
+        <div class="node blue"></div>
+        <div class="center"><div class="mouth"></div></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

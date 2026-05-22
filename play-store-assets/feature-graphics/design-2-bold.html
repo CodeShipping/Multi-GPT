@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1024px; height: 500px; overflow: hidden; }
+  body {
+    font-family: -apple-system, "SF Pro Display", "Inter", "Helvetica Neue", Arial, sans-serif;
+    background:
+      radial-gradient(circle at 100% 0%, rgba(16,185,129,0.32) 0%, transparent 45%),
+      radial-gradient(circle at 0% 100%, rgba(139,92,246,0.30) 0%, transparent 45%),
+      linear-gradient(135deg, #6366F1 0%, #4F46E5 50%, #1E1B4B 100%);
+    color: #fff;
+    position: relative;
+  }
+  .blobs { position: absolute; inset: 0; }
+  .blob {
+    position: absolute; border-radius: 50%;
+    filter: blur(70px);
+    opacity: 0.55;
+  }
+  .b1 { width: 320px; height: 320px; background: #10B981; top: -90px; right: 80px; }
+  .b2 { width: 260px; height: 260px; background: #F59E0B; bottom: -60px; left: 280px; opacity: 0.40;}
+  .b3 { width: 220px; height: 220px; background: #8B5CF6; top: 100px; left: -60px; }
+
+  .container {
+    position: relative; height: 100%; padding: 70px 70px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    z-index: 2;
+  }
+
+  .top {
+    display: flex; align-items: center; gap: 14px;
+  }
+  .logo-mark {
+    width: 56px; height: 56px;
+    background: #fff; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    position: relative;
+  }
+  .logo-mark .face {
+    width: 32px; height: 22px; background: #4F46E5; border-radius: 6px;
+    position: relative;
+  }
+  .logo-mark .face::before, .logo-mark .face::after {
+    content: ''; position: absolute; top: 7px;
+    width: 6px; height: 6px; border-radius: 50%; background: #fff;
+  }
+  .logo-mark .face::before { left: 7px; }
+  .logo-mark .face::after { right: 7px; }
+  .brand-name { font-size: 26px; font-weight: 700; letter-spacing: -0.4px; }
+
+  .hero {
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  h1 {
+    font-size: 124px; font-weight: 900; letter-spacing: -4px;
+    line-height: 0.95;
+    background: linear-gradient(180deg, #ffffff 0%, #e0e7ff 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 6px 30px rgba(0,0,0,0.20);
+  }
+  .tagline {
+    font-size: 28px; font-weight: 600; letter-spacing: -0.4px;
+    color: rgba(255,255,255,0.96);
+    line-height: 1.2;
+  }
+
+  .bottom {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .pills {
+    display: flex; gap: 10px;
+  }
+  .pill {
+    font-size: 14px; font-weight: 600;
+    padding: 9px 16px; border-radius: 999px;
+    backdrop-filter: blur(10px);
+    background: rgba(255,255,255,0.16);
+    border: 1px solid rgba(255,255,255,0.22);
+  }
+  .pill .swatch {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    margin-right: 8px; vertical-align: middle;
+  }
+
+  .star {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.92);
+  }
+  .star svg { width: 16px; height: 16px; fill: #FBBF24; }
+</style>
+</head>
+<body>
+  <div class="blobs">
+    <div class="blob b1"></div>
+    <div class="blob b2"></div>
+    <div class="blob b3"></div>
+  </div>
+  <div class="container">
+    <div class="top">
+      <div class="logo-mark"><div class="face"></div></div>
+      <div class="brand-name">MultiAI</div>
+    </div>
+    <div class="hero">
+      <h1>All AI.<br/>One chat.</h1>
+      <div class="tagline">Every major AI model — together in a single conversation.</div>
+    </div>
+    <div class="bottom">
+      <div class="pills">
+        <div class="pill"><span class="swatch" style="background:#10B981"></span>Cloud AI</div>
+        <div class="pill"><span class="swatch" style="background:#8B5CF6"></span>Local AI</div>
+        <div class="pill"><span class="swatch" style="background:#3B82F6"></span>Custom API</div>
+        <div class="pill"><span class="swatch" style="background:#F59E0B"></span>Multi-Model</div>
+      </div>
+      <div class="star">
+        <svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.9L22 10l-5.5 4.8L18 22l-6-3.7L6 22l1.5-7.2L2 10l7.1-1.1z"/></svg>
+        Open source · 100% free
+      </div>
+    </div>
+  </div>
+</body>
+</html>
