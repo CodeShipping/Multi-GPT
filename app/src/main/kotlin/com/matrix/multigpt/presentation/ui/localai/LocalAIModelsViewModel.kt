@@ -78,6 +78,17 @@ class LocalAIModelsViewModel @Inject constructor(
     init {
         loadModels()
         observeCompletedDownloads()
+        autoRefreshDaily()
+    }
+
+    /** Triggers a full catalog refresh at most once per 24h (same as the top-right refresh button). */
+    private fun autoRefreshDaily() {
+        val prefs = context.getSharedPreferences("local_ai_prefs", Context.MODE_PRIVATE)
+        val last = prefs.getLong("last_catalog_refresh", 0L)
+        if (System.currentTimeMillis() - last >= 24 * 60 * 60 * 1000L) {
+            prefs.edit().putLong("last_catalog_refresh", System.currentTimeMillis()).apply()
+            refreshModels()
+        }
     }
 
     /**

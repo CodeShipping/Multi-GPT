@@ -53,6 +53,11 @@ class LocalInferenceServiceImpl @Inject constructor(
                 if (!modelFile.exists()) {
                     return@withContext Result.failure(IllegalArgumentException("Model file not found: $modelPath"))
                 }
+                if (modelFile.length() < 1024) {
+                    return@withContext Result.failure(IllegalArgumentException(
+                        "Model file is empty or corrupted (${modelFile.length()} bytes). Please delete and re-download."
+                    ))
+                }
                 
                 // Get ACTUAL device RAM (not JVM heap)
                 val activityManager = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager

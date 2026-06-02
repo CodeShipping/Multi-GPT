@@ -129,8 +129,8 @@
         "id": "smollm2-135m-q8",
         "name": "SmolLM2 135M",
         "description": "Tiny model for ultra-fast responses. Perfect for simple queries.",
-        "size": 150000000,
-        "downloadUrl": "https://huggingface.co/HuggingFaceTB/SmolLM2-135M-Instruct-GGUF/resolve/main/smollm2-135m-instruct-q8_0.gguf",
+        "size": 144811488,
+        "downloadUrl": "https://huggingface.co/mradermacher/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct.Q8_0.gguf",
         "fileName": "smollm2-135m-q8.gguf",
         "performance": {
           "tokensPerSecond": 60,
