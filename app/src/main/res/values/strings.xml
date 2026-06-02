@@ -59,6 +59,9 @@
     <string name="setup_complete_logo">Setup Complete Logo</string>
     <string name="chats">Chats</string>
     <string name="settings">Settings</string>
+    <string name="settings_section_general">General</string>
+    <string name="settings_section_offline_ai">Offline AI</string>
+    <string name="settings_section_online_ai">Online AI</string>
     <string name="new_chat">New Chat</string>
     <string name="select_platform">Select Platform</string>
     <string name="select_provider" translatable="false">Select Provider</string>

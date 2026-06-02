@@ -80,18 +80,21 @@ fun SettingScreen(
                 .padding(innerPadding)
                 .verticalScroll(scrollState)
         ) {
-            // Remove Ads / status — shown at top of settings for visibility
+            // General
+            SettingSectionHeader(stringResource(R.string.settings_section_general))
             RemoveAdsSettingItem(
                 isAdFree = isAdFree,
                 onItemClick = onNavigateToUpgrade
             )
-
             ThemeSetting { settingViewModel.openThemeDialog() }
-            
-            // Local AI Models - On-device inference (top priority, right after theme)
+            AboutPageItem(onItemClick = onNavigateToAboutPage)
+
+            // Offline AI — on-device inference
+            SettingSectionHeader(stringResource(R.string.settings_section_offline_ai))
             LocalAISettingItem(onItemClick = onNavigateToLocalAI)
-            
-            // Cloud-based API platforms (exclude LOCAL since it has dedicated settings)
+
+            // Online AI — cloud-based API platforms (exclude LOCAL which lives under Offline AI)
+            SettingSectionHeader(stringResource(R.string.settings_section_online_ai))
             ApiType.entries.filter { it != ApiType.LOCAL }.forEach { apiType ->
                 SettingItem(
                     title = getPlatformSettingTitle(apiType),
@@ -101,14 +104,22 @@ fun SettingScreen(
                     showLeadingIcon = false
                 )
             }
-            
-            AboutPageItem(onItemClick = onNavigateToAboutPage)
 
             if (dialogState.isThemeDialogOpen) {
                 ThemeSettingDialog(settingViewModel)
             }
         }
     }
+}
+
+@Composable
+private fun SettingSectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 4.dp)
+    )
 }
 
 @Composable
