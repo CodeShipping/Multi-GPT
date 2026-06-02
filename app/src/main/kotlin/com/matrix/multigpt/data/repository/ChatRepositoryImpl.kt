@@ -56,13 +56,13 @@ class ChatRepositoryImpl @Inject constructor(
     private lateinit var ollama: OpenAI
     private lateinit var groq: OpenAI
 
-    override suspend fun completeOpenAIChat(question: Message, history: List<Message>): Flow<ApiState> {
+    override suspend fun completeOpenAIChat(question: Message, history: List<Message>, systemPromptOverride: String?): Flow<ApiState> {
         val platform = checkNotNull(settingRepository.fetchPlatforms().firstOrNull { it.name == ApiType.OPENAI })
         openAI = OpenAI(platform.token ?: "", host = OpenAIHost(baseUrl = platform.apiUrl))
 
         val generatedMessages = messageToOpenAICompatibleMessage(ApiType.OPENAI, history + listOf(question))
         val generatedMessageWithPrompt = listOf(
-            ChatMessage(role = ChatRole.System, content = platform.systemPrompt ?: ModelConstants.OPENAI_PROMPT)
+            ChatMessage(role = ChatRole.System, content = systemPromptOverride ?: platform.systemPrompt ?: ModelConstants.OPENAI_PROMPT)
         ) + generatedMessages
         val chatCompletionRequest = ChatCompletionRequest(
             model = ModelId(platform.model ?: ""),
@@ -78,7 +78,7 @@ class ChatRepositoryImpl @Inject constructor(
             .onCompletion { emit(ApiState.Done) }
     }
 
-    override suspend fun completeAnthropicChat(question: Message, history: List<Message>): Flow<ApiState> {
+    override suspend fun completeAnthropicChat(question: Message, history: List<Message>, systemPromptOverride: String?): Flow<ApiState> {
         val platform = checkNotNull(settingRepository.fetchPlatforms().firstOrNull { it.name == ApiType.ANTHROPIC })
         anthropic.setToken(platform.token)
         anthropic.setAPIUrl(platform.apiUrl)
@@ -88,7 +88,7 @@ class ChatRepositoryImpl @Inject constructor(
             model = platform.model ?: "",
             messages = generatedMessages,
             maxTokens = ModelConstants.ANTHROPIC_MAXIMUM_TOKEN,
-            systemPrompt = platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT,
+            systemPrompt = systemPromptOverride ?: platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT,
             stream = true,
             temperature = platform.temperature,
             topP = platform.topP
@@ -107,7 +107,7 @@ class ChatRepositoryImpl @Inject constructor(
             .onCompletion { emit(ApiState.Done) }
     }
 
-    override suspend fun completeGoogleChat(question: Message, history: List<Message>): Flow<ApiState> {
+    override suspend fun completeGoogleChat(question: Message, history: List<Message>, systemPromptOverride: String?): Flow<ApiState> {
         val platform = checkNotNull(settingRepository.fetchPlatforms().firstOrNull { it.name == ApiType.GOOGLE })
         val config = generationConfig {
             temperature = platform.temperature
@@ -116,7 +116,7 @@ class ChatRepositoryImpl @Inject constructor(
         google = GenerativeModel(
             modelName = platform.model ?: "",
             apiKey = platform.token ?: "",
-            systemInstruction = content { text(platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT) },
+            systemInstruction = content { text(systemPromptOverride ?: platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT) },
             generationConfig = config,
             safetySettings = listOf(
                 SafetySetting(HarmCategory.DANGEROUS_CONTENT, BlockThreshold.ONLY_HIGH),
@@ -134,13 +134,13 @@ class ChatRepositoryImpl @Inject constructor(
             .onCompletion { emit(ApiState.Done) }
     }
 
-    override suspend fun completeGroqChat(question: Message, history: List<Message>): Flow<ApiState> {
+    override suspend fun completeGroqChat(question: Message, history: List<Message>, systemPromptOverride: String?): Flow<ApiState> {
         val platform = checkNotNull(settingRepository.fetchPlatforms().firstOrNull { it.name == ApiType.GROQ })
         groq = OpenAI(platform.token ?: "", host = OpenAIHost(baseUrl = platform.apiUrl))
 
         val generatedMessages = messageToOpenAICompatibleMessage(ApiType.GROQ, history + listOf(question))
         val generatedMessageWithPrompt = listOf(
-            ChatMessage(role = ChatRole.System, content = platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT)
+            ChatMessage(role = ChatRole.System, content = systemPromptOverride ?: platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT)
         ) + generatedMessages
         val chatCompletionRequest = ChatCompletionRequest(
             model = ModelId(platform.model ?: ""),
@@ -156,13 +156,13 @@ class ChatRepositoryImpl @Inject constructor(
             .onCompletion { emit(ApiState.Done) }
     }
 
-    override suspend fun completeOllamaChat(question: Message, history: List<Message>): Flow<ApiState> {
+    override suspend fun completeOllamaChat(question: Message, history: List<Message>, systemPromptOverride: String?): Flow<ApiState> {
         val platform = checkNotNull(settingRepository.fetchPlatforms().firstOrNull { it.name == ApiType.OLLAMA })
         ollama = OpenAI(platform.token ?: "", host = OpenAIHost(baseUrl = "${platform.apiUrl}v1/"))
 
         val generatedMessages = messageToOpenAICompatibleMessage(ApiType.OLLAMA, history + listOf(question))
         val generatedMessageWithPrompt = listOf(
-            ChatMessage(role = ChatRole.System, content = platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT)
+            ChatMessage(role = ChatRole.System, content = systemPromptOverride ?: platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT)
         ) + generatedMessages
         val chatCompletionRequest = ChatCompletionRequest(
             model = ModelId(platform.model ?: ""),
@@ -178,7 +178,7 @@ class ChatRepositoryImpl @Inject constructor(
             .onCompletion { emit(ApiState.Done) }
     }
 
-    override suspend fun completeBedrockChat(question: Message, history: List<Message>): Flow<ApiState> {
+    override suspend fun completeBedrockChat(question: Message, history: List<Message>, systemPromptOverride: String?): Flow<ApiState> {
         val platform = checkNotNull(settingRepository.fetchPlatforms().firstOrNull { it.name == ApiType.BEDROCK })
         
         // Parse the credentials JSON to BedrockCredentials
@@ -200,7 +200,7 @@ class ChatRepositoryImpl @Inject constructor(
         return bedrock.streamChatMessage(
             messages = generatedMessages,
             model = platform.model ?: "",
-            systemPrompt = platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT,
+            systemPrompt = systemPromptOverride ?: platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT,
             temperature = platform.temperature?.toDouble(),
             maxTokens = ModelConstants.ANTHROPIC_MAXIMUM_TOKEN,
             topP = platform.topP?.toDouble()
@@ -218,14 +218,14 @@ class ChatRepositoryImpl @Inject constructor(
             .onCompletion { emit(ApiState.Done) }
     }
 
-    override suspend fun completeCustomChat(question: Message, history: List<Message>): Flow<ApiState> {
+    override suspend fun completeCustomChat(question: Message, history: List<Message>, systemPromptOverride: String?): Flow<ApiState> {
         val platform = checkNotNull(settingRepository.fetchPlatforms().firstOrNull { it.name == ApiType.CUSTOM })
         val baseUrl = platform.apiUrl.let { if (it.endsWith("/")) it else "$it/" }
         val custom = OpenAI(platform.token ?: "", host = OpenAIHost(baseUrl = "${baseUrl}v1/"))
 
         val generatedMessages = messageToOpenAICompatibleMessage(ApiType.CUSTOM, history + listOf(question))
         val generatedMessageWithPrompt = listOf(
-            ChatMessage(role = ChatRole.System, content = platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT)
+            ChatMessage(role = ChatRole.System, content = systemPromptOverride ?: platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT)
         ) + generatedMessages
         val chatCompletionRequest = ChatCompletionRequest(
             model = ModelId(platform.model ?: ""),
@@ -249,6 +249,10 @@ class ChatRepositoryImpl @Inject constructor(
 
     override suspend fun updateChatTitle(chatRoom: ChatRoom, title: String) {
         chatRoomDao.editChatRoom(chatRoom.copy(title = title.replace('\n', ' ').take(50)))
+    }
+
+    override suspend fun editChatRoom(chatRoom: ChatRoom) {
+        chatRoomDao.editChatRoom(chatRoom)
     }
 
     override suspend fun saveChat(chatRoom: ChatRoom, messages: List<Message>): ChatRoom {

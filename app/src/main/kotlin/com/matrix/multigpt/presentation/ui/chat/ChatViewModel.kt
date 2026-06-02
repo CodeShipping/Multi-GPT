@@ -57,6 +57,9 @@ class ChatViewModel @Inject constructor(
     private val _isEditQuestionDialogOpen = MutableStateFlow(false)
     val isEditQuestionDialogOpen = _isEditQuestionDialogOpen.asStateFlow()
 
+    private val _isSystemPromptDialogOpen = MutableStateFlow(false)
+    val isSystemPromptDialogOpen = _isSystemPromptDialogOpen.asStateFlow()
+
     // Enabled platforms list
     private val _enabledPlatformsInApp = MutableStateFlow(listOf<ApiType>())
     val enabledPlatformsInApp = _enabledPlatformsInApp.asStateFlow()
@@ -252,6 +255,23 @@ class ChatViewModel @Inject constructor(
 
     fun openChatTitleDialog() = _isChatTitleDialogOpen.update { true }
 
+    fun openSystemPromptDialog() = _isSystemPromptDialogOpen.update { true }
+    fun closeSystemPromptDialog() = _isSystemPromptDialogOpen.update { false }
+
+    fun updateChatSystemPrompt(prompt: String) {
+        _chatRoom.update { it.copy(systemPrompt = prompt.ifBlank { null }) }
+        if (_chatRoom.value.id > 0) {
+            viewModelScope.launch {
+                chatRepository.editChatRoom(_chatRoom.value)
+            }
+        }
+    }
+
+    fun setPersona(persona: com.matrix.multigpt.data.model.AiPersona) {
+        _chatRoom.update { it.copy(systemPrompt = persona.systemPrompt) }
+        _isSystemPromptDialogOpen.update { true }
+    }
+
     fun openEditQuestionDialog(question: Message) {
         _editedQuestion.update { question }
         _isEditQuestionDialogOpen.update { true }
@@ -435,49 +455,49 @@ class ChatViewModel @Inject constructor(
 
     private fun completeAnthropicChat() {
         viewModelScope.launch {
-            val chatFlow = chatRepository.completeAnthropicChat(question = _userMessage.value, history = _messages.value)
+            val chatFlow = chatRepository.completeAnthropicChat(question = _userMessage.value, history = _messages.value, systemPromptOverride = _chatRoom.value.systemPrompt)
             chatFlow.collect { chunk -> anthropicFlow.emit(chunk) }
         }
     }
 
     private fun completeGoogleChat() {
         viewModelScope.launch {
-            val chatFlow = chatRepository.completeGoogleChat(question = _userMessage.value, history = _messages.value)
+            val chatFlow = chatRepository.completeGoogleChat(question = _userMessage.value, history = _messages.value, systemPromptOverride = _chatRoom.value.systemPrompt)
             chatFlow.collect { chunk -> googleFlow.emit(chunk) }
         }
     }
 
     private fun completeGroqChat() {
         viewModelScope.launch {
-            val chatFlow = chatRepository.completeGroqChat(question = _userMessage.value, history = _messages.value)
+            val chatFlow = chatRepository.completeGroqChat(question = _userMessage.value, history = _messages.value, systemPromptOverride = _chatRoom.value.systemPrompt)
             chatFlow.collect { chunk -> groqFlow.emit(chunk) }
         }
     }
 
     private fun completeOllamaChat() {
         viewModelScope.launch {
-            val chatFlow = chatRepository.completeOllamaChat(question = _userMessage.value, history = _messages.value)
+            val chatFlow = chatRepository.completeOllamaChat(question = _userMessage.value, history = _messages.value, systemPromptOverride = _chatRoom.value.systemPrompt)
             chatFlow.collect { chunk -> ollamaFlow.emit(chunk) }
         }
     }
 
     private fun completeOpenAIChat() {
         viewModelScope.launch {
-            val chatFlow = chatRepository.completeOpenAIChat(question = _userMessage.value, history = _messages.value)
+            val chatFlow = chatRepository.completeOpenAIChat(question = _userMessage.value, history = _messages.value, systemPromptOverride = _chatRoom.value.systemPrompt)
             chatFlow.collect { chunk -> openAIFlow.emit(chunk) }
         }
     }
 
     private fun completeBedrockChat() {
         viewModelScope.launch {
-            val chatFlow = chatRepository.completeBedrockChat(question = _userMessage.value, history = _messages.value)
+            val chatFlow = chatRepository.completeBedrockChat(question = _userMessage.value, history = _messages.value, systemPromptOverride = _chatRoom.value.systemPrompt)
             chatFlow.collect { chunk -> bedrockFlow.emit(chunk) }
         }
     }
 
     private fun completeCustomChat() {
         viewModelScope.launch {
-            val chatFlow = chatRepository.completeCustomChat(question = _userMessage.value, history = _messages.value)
+            val chatFlow = chatRepository.completeCustomChat(question = _userMessage.value, history = _messages.value, systemPromptOverride = _chatRoom.value.systemPrompt)
             chatFlow.collect { chunk -> customFlow.emit(chunk) }
         }
     }

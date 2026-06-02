@@ -44,6 +44,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material3.Divider
@@ -51,6 +52,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
@@ -135,6 +138,7 @@ fun ChatScreen(
     val chatRoom by chatViewModel.chatRoom.collectAsStateWithLifecycle()
     val isChatTitleDialogOpen by chatViewModel.isChatTitleDialogOpen.collectAsStateWithLifecycle()
     val isEditQuestionDialogOpen by chatViewModel.isEditQuestionDialogOpen.collectAsStateWithLifecycle()
+    val isSystemPromptDialogOpen by chatViewModel.isSystemPromptDialogOpen.collectAsStateWithLifecycle()
     val isIdle by chatViewModel.isIdle.collectAsStateWithLifecycle()
     val isLoaded by chatViewModel.isLoaded.collectAsStateWithLifecycle()
     val messages by chatViewModel.messages.collectAsStateWithLifecycle()
@@ -220,6 +224,7 @@ fun ChatScreen(
             scrollBehavior,
             chatViewModel::openChatTitleDialog,
             onExportChatItemClick = { exportChat(context, chatViewModel) },
+            onSystemPromptClick = chatViewModel::openSystemPromptDialog,
             currentModels = currentModels,
             fetchedModels = fetchedModels,
             modelFetchState = modelFetchState,
@@ -247,6 +252,9 @@ fun ChatScreen(
                     WelcomeSuggestions(
                         onSuggestionClick = { suggestion ->
                             chatViewModel.updateQuestion(suggestion)
+                        },
+                        onPersonaSelected = { persona ->
+                            chatViewModel.setPersona(persona)
                         }
                     )
                 }
@@ -470,6 +478,17 @@ fun ChatScreen(
             }
         )
     }
+
+    if (isSystemPromptDialogOpen) {
+        ChatSystemPromptDialog(
+            currentPrompt = chatRoom.systemPrompt ?: "",
+            onDismiss = chatViewModel::closeSystemPromptDialog,
+            onConfirm = { prompt ->
+                chatViewModel.updateChatSystemPrompt(prompt)
+                chatViewModel.closeSystemPromptDialog()
+            }
+        )
+    }
 }
 
 private fun checkAICoreAvailability(aiCore: PackageInfo?, privateComputeServices: PackageInfo?): Boolean {
@@ -519,6 +538,7 @@ private fun ChatTopBar(
     scrollBehavior: TopAppBarScrollBehavior,
     onChatTitleItemClick: () -> Unit,
     onExportChatItemClick: () -> Unit,
+    onSystemPromptClick: () -> Unit = {},
     currentModels: Map<ApiType, String>,
     fetchedModels: Map<ApiType, List<com.matrix.multigpt.data.dto.ModelInfo>>,
     modelFetchState: Map<ApiType, com.matrix.multigpt.data.dto.ModelFetchResult>,
@@ -786,6 +806,9 @@ private fun ChatTopBar(
             }
         },
         actions = {
+            IconButton(onClick = onSystemPromptClick) {
+                Icon(Icons.Outlined.Edit, contentDescription = "System Prompt")
+            }
             IconButton(
                 onClick = { isDropDownMenuExpanded = isDropDownMenuExpanded.not() }
             ) {
@@ -800,7 +823,8 @@ private fun ChatTopBar(
                     onChatTitleItemClick.invoke()
                     isDropDownMenuExpanded = false
                 },
-                onExportChatItemClick = onExportChatItemClick
+                onExportChatItemClick = onExportChatItemClick,
+                onSystemPromptClick = onSystemPromptClick
             )
         },
         scrollBehavior = scrollBehavior
@@ -813,7 +837,8 @@ fun ChatDropdownMenu(
     isMenuItemEnabled: Boolean,
     onDismissRequest: () -> Unit,
     onChatTitleItemClick: () -> Unit,
-    onExportChatItemClick: () -> Unit
+    onExportChatItemClick: () -> Unit,
+    onSystemPromptClick: () -> Unit = {}
 ) {
     DropdownMenu(
         modifier = Modifier.wrapContentSize(),
@@ -982,14 +1007,12 @@ fun TypingIndicator(
  * Welcome section shown when chat is empty — friendly greeting + suggestion chips.
  */
 @Composable
-private fun WelcomeSuggestions(onSuggestionClick: (String) -> Unit) {
+private fun WelcomeSuggestions(onSuggestionClick: (String) -> Unit, onPersonaSelected: (com.matrix.multigpt.data.model.AiPersona) -> Unit = {}) {
     val suggestions = listOf(
         "✍️ Write a birthday message for a friend",
         "💡 Give me ideas for a weekend trip",
         "📧 Help me write a professional email",
-        "🍳 Suggest a quick dinner recipe",
-        "📝 Summarize a topic for me",
-        "🤔 Explain something in simple words"
+        "🍳 Suggest a quick dinner recipe"
     )
 
     Column(
@@ -998,7 +1021,7 @@ private fun WelcomeSuggestions(onSuggestionClick: (String) -> Unit) {
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(16.dp))
         Text(
             text = "👋 Hi there!",
             style = MaterialTheme.typography.headlineMedium,
@@ -1006,12 +1029,24 @@ private fun WelcomeSuggestions(onSuggestionClick: (String) -> Unit) {
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "I can help with writing, ideas, learning, and more.\nTap a suggestion or type your own question.",
+            text = "Pick a character or type anything below.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Persona grid
+        PersonaPickerSection(onPersonaSelected = onPersonaSelected)
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Text(
+            text = "Or try a quick prompt:",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
 
         suggestions.chunked(2).forEach { row ->
             Row(
@@ -1032,7 +1067,6 @@ private fun WelcomeSuggestions(onSuggestionClick: (String) -> Unit) {
                         )
                     }
                 }
-                // Fill remaining space if odd number
                 if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -1048,4 +1082,46 @@ private fun shareText(context: Context, text: String) {
         putExtra(Intent.EXTRA_TEXT, shareBody)
     }
     context.startActivity(Intent.createChooser(intent, "Share response"))
+}
+
+/**
+ * Dialog to view/edit the per-chat system prompt.
+ */
+@Composable
+private fun ChatSystemPromptDialog(
+    currentPrompt: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var prompt by rememberSaveable { mutableStateOf(currentPrompt) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("System Prompt") },
+        text = {
+            Column {
+                Text(
+                    "Set instructions for how the AI should behave in this chat.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = prompt,
+                    onValueChange = { prompt = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 120.dp),
+                    placeholder = { Text("e.g. You are a helpful cooking assistant...") },
+                    maxLines = 8
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(prompt) }) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }

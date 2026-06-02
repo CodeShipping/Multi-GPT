@@ -38,6 +38,6 @@ object DatabaseModule {
         ChatDatabase::class.java,
         DB_NAME
     )
-        .addMigrations(MIGRATION_1_2)
+        .addMigrations(MIGRATION_1_2, ChatDatabase.MIGRATION_2_3)
         .build()
 }
