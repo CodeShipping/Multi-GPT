@@ -38,6 +38,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.matrix.multigpt.R
 import com.matrix.multigpt.data.ModelConstants.anthropicModels
 import com.matrix.multigpt.data.ModelConstants.bedrockModels
+import com.matrix.multigpt.data.ModelConstants.customModels
 import com.matrix.multigpt.data.ModelConstants.getDefaultAPIUrl
 import com.matrix.multigpt.data.ModelConstants.googleModels
 import com.matrix.multigpt.data.ModelConstants.groqModels
@@ -347,6 +348,7 @@ private fun ModelDialog(
         ApiType.GROQ -> groqModels
         ApiType.OLLAMA -> ollamaModels
         ApiType.BEDROCK -> bedrockModels
+        ApiType.CUSTOM -> customModels
         ApiType.LOCAL -> linkedSetOf() // Local models are managed separately
     }
     val fallbackModels = when (apiType) {
@@ -356,6 +358,7 @@ private fun ModelDialog(
         ApiType.GROQ -> generateGroqModelList(models = modelList)
         ApiType.OLLAMA -> listOf()
         ApiType.BEDROCK -> generateBedrockModelList(models = modelList)
+        ApiType.CUSTOM -> listOf() // Models entered manually or fetched
         ApiType.LOCAL -> listOf() // Local models are selected via Local AI settings
     }
     

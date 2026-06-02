@@ -9,6 +9,7 @@ object ModelConstants {
     val googleModels = linkedSetOf("gemini-1.5-pro-latest", "gemini-1.5-flash-latest", "gemini-1.0-pro")
     val groqModels = linkedSetOf("llama-3.2-3b-preview", "llama-3.2-1b-preview", "llama-3.1-70b-versatile", "llama-3.1-8b-instant", "gemma2-9b-it")
     val ollamaModels = linkedSetOf<String>()
+    val customModels = linkedSetOf<String>() // Populated dynamically or from presets
     val bedrockModels = linkedSetOf(
         "anthropic.claude-3-5-sonnet-20240620-v1:0",
         "anthropic.claude-3-sonnet-20240229-v1:0",
@@ -37,6 +38,7 @@ object ModelConstants {
         ApiType.GROQ -> GROQ_API_URL
         ApiType.OLLAMA -> ""
         ApiType.BEDROCK -> BEDROCK_BASE_URL
+        ApiType.CUSTOM -> "" // Set by user via presets or manual entry
         ApiType.LOCAL -> "" // Local models don't need API URL
     }
 

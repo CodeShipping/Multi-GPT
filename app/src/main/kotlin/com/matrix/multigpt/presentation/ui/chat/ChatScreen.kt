@@ -154,6 +154,8 @@ fun ChatScreen(
     val ollamaMessage by chatViewModel.ollamaMessage.collectAsStateWithLifecycle()
     val bedrockMessage by chatViewModel.bedrockMessage.collectAsStateWithLifecycle()
     val bedrockLoadingState by chatViewModel.bedrockLoadingState.collectAsStateWithLifecycle()
+    val customMessage by chatViewModel.customMessage.collectAsStateWithLifecycle()
+    val customLoadingState by chatViewModel.customLoadingState.collectAsStateWithLifecycle()
     val localMessage by chatViewModel.localMessage.collectAsStateWithLifecycle()
     val localLoadingState by chatViewModel.localLoadingState.collectAsStateWithLifecycle()
     val geminiNano by chatViewModel.geminiNanoMessage.collectAsStateWithLifecycle()
@@ -341,6 +343,7 @@ fun ChatScreen(
                                     ApiType.GROQ -> groqMessage
                                     ApiType.OLLAMA -> ollamaMessage
                                     ApiType.BEDROCK -> bedrockMessage
+                                    ApiType.CUSTOM -> customMessage
                                     ApiType.LOCAL -> localMessage
                                 }
 
@@ -351,6 +354,7 @@ fun ChatScreen(
                                     ApiType.GROQ -> groqLoadingState
                                     ApiType.OLLAMA -> ollamaLoadingState
                                     ApiType.BEDROCK -> bedrockLoadingState
+                                    ApiType.CUSTOM -> customLoadingState
                                     ApiType.LOCAL -> localLoadingState
                                 }
 

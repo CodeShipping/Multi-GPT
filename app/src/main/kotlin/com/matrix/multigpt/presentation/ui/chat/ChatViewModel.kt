@@ -109,6 +109,9 @@ class ChatViewModel @Inject constructor(
     private val _bedrockLoadingState = MutableStateFlow<LoadingState>(LoadingState.Idle)
     val bedrockLoadingState = _bedrockLoadingState.asStateFlow()
 
+    private val _customLoadingState = MutableStateFlow<LoadingState>(LoadingState.Idle)
+    val customLoadingState = _customLoadingState.asStateFlow()
+
     private val _geminiNanoLoadingState = MutableStateFlow<LoadingState>(LoadingState.Idle)
     val geminiNanoLoadingState = _geminiNanoLoadingState.asStateFlow()
 
@@ -144,6 +147,9 @@ class ChatViewModel @Inject constructor(
     private val _bedrockMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.BEDROCK, modelName = null))
     val bedrockMessage = _bedrockMessage.asStateFlow()
 
+    private val _customMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.CUSTOM, modelName = null))
+    val customMessage = _customMessage.asStateFlow()
+
     private val _localMessage = MutableStateFlow(Message(chatId = chatRoomId, content = "", platformType = ApiType.LOCAL, modelName = null))
     val localMessage = _localMessage.asStateFlow()
     
@@ -160,6 +166,7 @@ class ChatViewModel @Inject constructor(
     private val groqFlow = MutableSharedFlow<ApiState>()
     private val ollamaFlow = MutableSharedFlow<ApiState>()
     private val bedrockFlow = MutableSharedFlow<ApiState>()
+    private val customFlow = MutableSharedFlow<ApiState>()
     private val localFlow = MutableSharedFlow<ApiState>()
     private val geminiNanoFlow = MutableSharedFlow<ApiState>()
 
@@ -313,6 +320,11 @@ class ChatViewModel @Inject constructor(
                 completeBedrockChat()
             }
 
+            ApiType.CUSTOM -> {
+                _customMessage.update { it.copy(id = message.id, content = "", createdAt = currentTimeStamp, modelName = message.modelName) }
+                completeCustomChat()
+            }
+
             else -> {}
         }
     }
@@ -410,6 +422,10 @@ class ChatViewModel @Inject constructor(
                 _bedrockMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.BEDROCK]) }
                 completeBedrockChat()
             }
+            ApiType.CUSTOM -> {
+                _customMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.CUSTOM]) }
+                completeCustomChat()
+            }
             ApiType.LOCAL -> {
                 _localMessage.update { it.copy(content = "", createdAt = currentTimeStamp, modelName = currentModels.value[ApiType.LOCAL]) }
                 completeLocalChat()
@@ -456,6 +472,13 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             val chatFlow = chatRepository.completeBedrockChat(question = _userMessage.value, history = _messages.value)
             chatFlow.collect { chunk -> bedrockFlow.emit(chunk) }
+        }
+    }
+
+    private fun completeCustomChat() {
+        viewModelScope.launch {
+            val chatFlow = chatRepository.completeCustomChat(question = _userMessage.value, history = _messages.value)
+            chatFlow.collect { chunk -> customFlow.emit(chunk) }
         }
     }
     
@@ -805,6 +828,13 @@ class ChatViewModel @Inject constructor(
                 onLoadingComplete = { updateLoadingState(ApiType.BEDROCK, LoadingState.Idle) }
             )
         }
+
+        viewModelScope.launch {
+            customFlow.handleStates(
+                messageFlow = _customMessage,
+                onLoadingComplete = { updateLoadingState(ApiType.CUSTOM, LoadingState.Idle) }
+            )
+        }
         
         viewModelScope.launch {
             localFlow.handleStates(
@@ -849,6 +879,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqLoadingState
             ApiType.OLLAMA -> _ollamaLoadingState
             ApiType.BEDROCK -> _bedrockLoadingState
+            ApiType.CUSTOM -> _customLoadingState
             ApiType.LOCAL -> _localLoadingState
         }
 
@@ -862,6 +893,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqMessage.update { message }
             ApiType.OLLAMA -> _ollamaMessage.update { message }
             ApiType.BEDROCK -> _bedrockMessage.update { message }
+            ApiType.CUSTOM -> _customMessage.update { message }
             ApiType.LOCAL -> _localMessage.update { message }
         }
     }
@@ -879,6 +911,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqMessage.value
             ApiType.OLLAMA -> _ollamaMessage.value
             ApiType.BEDROCK -> _bedrockMessage.value
+            ApiType.CUSTOM -> _customMessage.value
             ApiType.LOCAL -> _localMessage.value
         }
         
@@ -895,6 +928,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqLoadingState.update { loadingState }
             ApiType.OLLAMA -> _ollamaLoadingState.update { loadingState }
             ApiType.BEDROCK -> _bedrockLoadingState.update { loadingState }
+            ApiType.CUSTOM -> _customLoadingState.update { loadingState }
             ApiType.LOCAL -> _localLoadingState.update { loadingState }
         }
 
@@ -907,6 +941,7 @@ class ChatViewModel @Inject constructor(
             ApiType.GROQ -> _groqLoadingState
             ApiType.OLLAMA -> _ollamaLoadingState
             ApiType.BEDROCK -> _bedrockLoadingState
+            ApiType.CUSTOM -> _customLoadingState
             ApiType.LOCAL -> _localLoadingState
         }
 

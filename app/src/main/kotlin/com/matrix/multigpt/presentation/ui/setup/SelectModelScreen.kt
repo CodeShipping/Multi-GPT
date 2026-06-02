@@ -105,6 +105,7 @@ fun SelectModelScreen(
         ApiType.GROQ -> generateGroqModelList(models = groqModels)
         ApiType.OLLAMA -> listOf()
         ApiType.BEDROCK -> generateBedrockModelList(models = bedrockModels)
+        ApiType.CUSTOM -> listOf() // Models entered manually or fetched from provider
         ApiType.LOCAL -> listOf() // Local models are managed via Local AI settings
     }
     
@@ -120,6 +121,7 @@ fun SelectModelScreen(
                     ApiType.GROQ -> 0
                     ApiType.OLLAMA -> 0
                     ApiType.BEDROCK -> 0
+                    ApiType.CUSTOM -> 0
                     ApiType.LOCAL -> 0
                 }
             )

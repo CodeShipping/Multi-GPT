@@ -44,6 +44,7 @@ class ModelFetchServiceImpl @Inject constructor(
                 ApiType.ANTHROPIC -> fetchAnthropicModels()
                 ApiType.OLLAMA -> fetchOllamaModels(apiUrl)
                 ApiType.BEDROCK -> fetchBedrockModels()
+                ApiType.CUSTOM -> fetchOpenAIModels(apiUrl, apiKey) // OpenAI-compatible /v1/models
                 ApiType.LOCAL -> fetchLocalModels()
             }
         } catch (e: Exception) {

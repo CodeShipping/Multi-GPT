@@ -218,6 +218,29 @@ class ChatRepositoryImpl @Inject constructor(
             .onCompletion { emit(ApiState.Done) }
     }
 
+    override suspend fun completeCustomChat(question: Message, history: List<Message>): Flow<ApiState> {
+        val platform = checkNotNull(settingRepository.fetchPlatforms().firstOrNull { it.name == ApiType.CUSTOM })
+        val baseUrl = platform.apiUrl.let { if (it.endsWith("/")) it else "$it/" }
+        val custom = OpenAI(platform.token ?: "", host = OpenAIHost(baseUrl = "${baseUrl}v1/"))
+
+        val generatedMessages = messageToOpenAICompatibleMessage(ApiType.CUSTOM, history + listOf(question))
+        val generatedMessageWithPrompt = listOf(
+            ChatMessage(role = ChatRole.System, content = platform.systemPrompt ?: ModelConstants.DEFAULT_PROMPT)
+        ) + generatedMessages
+        val chatCompletionRequest = ChatCompletionRequest(
+            model = ModelId(platform.model ?: ""),
+            messages = generatedMessageWithPrompt,
+            temperature = platform.temperature?.toDouble(),
+            topP = platform.topP?.toDouble()
+        )
+
+        return custom.chatCompletions(chatCompletionRequest)
+            .map<ChatCompletionChunk, ApiState> { chunk -> ApiState.Success(chunk.choices.getOrNull(0)?.delta?.content ?: "") }
+            .catch { throwable -> emit(ApiState.Error(throwable.message ?: "Unknown error")) }
+            .onStart { emit(ApiState.Loading) }
+            .onCompletion { emit(ApiState.Done) }
+    }
+
     override suspend fun fetchChatList(): List<ChatRoom> = chatRoomDao.getChatRooms()
 
     override suspend fun fetchMessages(chatId: Int): List<Message> = messageDao.loadMessages(chatId)

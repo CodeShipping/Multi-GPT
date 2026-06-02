@@ -29,6 +29,7 @@ object Route {
     const val GROQ_SETTINGS = "groq_settings"
     const val OLLAMA_SETTINGS = "ollama_settings"
     const val BEDROCK_SETTINGS = "bedrock_settings"
+    const val CUSTOM_SETTINGS = "custom_settings"
     const val LOCAL_SETTINGS = "local_settings"
     const val ABOUT_PAGE = "about"
     const val LICENSE = "license"

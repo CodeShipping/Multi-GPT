@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import com.matrix.multigpt.data.ModelConstants.anthropicModels
 import com.matrix.multigpt.data.ModelConstants.bedrockModels
+import com.matrix.multigpt.data.ModelConstants.customModels
 import com.matrix.multigpt.data.ModelConstants.googleModels
 import com.matrix.multigpt.data.ModelConstants.groqModels
 import com.matrix.multigpt.data.ModelConstants.ollamaModels
@@ -43,6 +44,7 @@ class SetupViewModel @Inject constructor(
             Platform(ApiType.ANTHROPIC),
             Platform(ApiType.GOOGLE),
             Platform(ApiType.OLLAMA),
+            Platform(ApiType.CUSTOM),
             Platform(ApiType.LOCAL)
         )
     )
@@ -243,6 +245,7 @@ class SetupViewModel @Inject constructor(
             ApiType.GROQ -> groqModels
             ApiType.OLLAMA -> ollamaModels
             ApiType.BEDROCK -> bedrockModels
+            ApiType.CUSTOM -> customModels
             ApiType.LOCAL -> linkedSetOf<String>() // Local models are managed via Local AI settings
         }.toList()
 
@@ -282,6 +285,7 @@ class SetupViewModel @Inject constructor(
             ApiType.GROQ -> groqModels.toList()
             ApiType.OLLAMA -> ollamaModels.toList()
             ApiType.BEDROCK -> bedrockModels.toList()
+            ApiType.CUSTOM -> customModels.toList()
             ApiType.LOCAL -> emptyList() // Local models are managed via Local AI settings
         }
     }

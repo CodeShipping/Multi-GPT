@@ -289,6 +289,7 @@ fun NavGraphBuilder.settingNavigation(navController: NavHostController) {
                         ApiType.GROQ -> navController.navigate(Route.GROQ_SETTINGS)
                         ApiType.OLLAMA -> navController.navigate(Route.OLLAMA_SETTINGS)
                         ApiType.BEDROCK -> navController.navigate(Route.BEDROCK_SETTINGS)
+                        ApiType.CUSTOM -> navController.navigate(Route.CUSTOM_SETTINGS)
                         ApiType.LOCAL -> navController.navigate(Route.LOCAL_AI_ENTRY)
                     }
                 },
@@ -355,6 +356,16 @@ fun NavGraphBuilder.settingNavigation(navController: NavHostController) {
             PlatformSettingScreen(
                 settingViewModel = settingViewModel,
                 apiType = ApiType.BEDROCK
+            ) { navController.navigateUp() }
+        }
+        composable(Route.CUSTOM_SETTINGS) {
+            val parentEntry = remember(it) {
+                navController.getBackStackEntry(Route.SETTING_ROUTE)
+            }
+            val settingViewModel: SettingViewModel = hiltViewModel(parentEntry)
+            PlatformSettingScreen(
+                settingViewModel = settingViewModel,
+                apiType = ApiType.CUSTOM
             ) { navController.navigateUp() }
         }
         composable(Route.ABOUT_PAGE) {

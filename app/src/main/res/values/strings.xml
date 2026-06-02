@@ -240,6 +240,13 @@
     <string name="bedrock_api_key_section_title">API Key Credentials</string>
     <string name="bedrock_api_key">Bedrock API Key</string>
     <string name="bedrock_api_key_help">Generate from AWS Bedrock Console → API Keys section</string>
+    <!-- Custom (OpenAI-compatible) provider -->
+    <string name="custom_provider" translatable="false">Custom (OpenAI-compatible)</string>
+    <string name="custom_provider_description">OpenRouter, DeepSeek, Mistral, xAI, and more.</string>
+    <string name="custom_api_key">API Key</string>
+    <string name="custom_api_help" translatable="false">https://openrouter.ai/keys</string>
+    <string name="custom_setting">Custom Provider Settings</string>
+    <string name="custom_brand_text">Custom Provider</string>
     <string name="options">Options</string>
     <string name="update_chat_title">Update chat title</string>
     <string name="chat_title">Chat Title</string>

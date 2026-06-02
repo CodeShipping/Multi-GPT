@@ -26,6 +26,7 @@ class SettingDataSourceImpl @Inject constructor(
         ApiType.GROQ to booleanPreferencesKey("groq_status"),
         ApiType.OLLAMA to booleanPreferencesKey("ollama_status"),
         ApiType.BEDROCK to booleanPreferencesKey("bedrock_status"),
+        ApiType.CUSTOM to booleanPreferencesKey("custom_status"),
         ApiType.LOCAL to booleanPreferencesKey("local_status")
     )
     private val apiUrlMap = mapOf(
@@ -35,6 +36,7 @@ class SettingDataSourceImpl @Inject constructor(
         ApiType.GROQ to stringPreferencesKey("groq_url"),
         ApiType.OLLAMA to stringPreferencesKey("ollama_url"),
         ApiType.BEDROCK to stringPreferencesKey("bedrock_url"),
+        ApiType.CUSTOM to stringPreferencesKey("custom_url"),
         ApiType.LOCAL to stringPreferencesKey("local_url")
     )
     private val apiTokenMap = mapOf(
@@ -43,6 +45,7 @@ class SettingDataSourceImpl @Inject constructor(
         ApiType.GOOGLE to stringPreferencesKey("google_ai_platform_token"),
         ApiType.GROQ to stringPreferencesKey("groq_token"),
         ApiType.OLLAMA to stringPreferencesKey("ollama_token"),
+        ApiType.CUSTOM to stringPreferencesKey("custom_token"),
         ApiType.LOCAL to stringPreferencesKey("local_token")
         // BEDROCK credentials now handled by SecureCredentialManager
     )
@@ -53,6 +56,7 @@ class SettingDataSourceImpl @Inject constructor(
         ApiType.GROQ to stringPreferencesKey("groq_model"),
         ApiType.OLLAMA to stringPreferencesKey("ollama_model"),
         ApiType.BEDROCK to stringPreferencesKey("bedrock_model"),
+        ApiType.CUSTOM to stringPreferencesKey("custom_model"),
         ApiType.LOCAL to stringPreferencesKey("local_model")
     )
     private val apiTemperatureMap = mapOf(
@@ -62,6 +66,7 @@ class SettingDataSourceImpl @Inject constructor(
         ApiType.GROQ to floatPreferencesKey("groq_temperature"),
         ApiType.OLLAMA to floatPreferencesKey("ollama_temperature"),
         ApiType.BEDROCK to floatPreferencesKey("bedrock_temperature"),
+        ApiType.CUSTOM to floatPreferencesKey("custom_temperature"),
         ApiType.LOCAL to floatPreferencesKey("local_temperature")
     )
     private val apiTopPMap = mapOf(
@@ -71,6 +76,7 @@ class SettingDataSourceImpl @Inject constructor(
         ApiType.GROQ to floatPreferencesKey("groq_top_p"),
         ApiType.OLLAMA to floatPreferencesKey("ollama_top_p"),
         ApiType.BEDROCK to floatPreferencesKey("bedrock_top_p"),
+        ApiType.CUSTOM to floatPreferencesKey("custom_top_p"),
         ApiType.LOCAL to floatPreferencesKey("local_top_p")
     )
     private val apiSystemPromptMap = mapOf(
@@ -80,6 +86,7 @@ class SettingDataSourceImpl @Inject constructor(
         ApiType.GROQ to stringPreferencesKey("groq_system_prompt"),
         ApiType.OLLAMA to stringPreferencesKey("ollama_system_prompt"),
         ApiType.BEDROCK to stringPreferencesKey("bedrock_system_prompt"),
+        ApiType.CUSTOM to stringPreferencesKey("custom_system_prompt"),
         ApiType.LOCAL to stringPreferencesKey("local_system_prompt")
     )
     private val dynamicThemeKey = intPreferencesKey("dynamic_mode")

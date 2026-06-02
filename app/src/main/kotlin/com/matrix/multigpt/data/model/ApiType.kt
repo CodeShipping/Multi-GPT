@@ -7,5 +7,6 @@ enum class ApiType {
     ANTHROPIC,
     GOOGLE,
     OLLAMA,
+    CUSTOM,
     LOCAL
 }

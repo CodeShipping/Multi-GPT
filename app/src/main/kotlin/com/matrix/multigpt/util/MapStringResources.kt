@@ -16,6 +16,7 @@ fun getPlatformTitleResources(): Map<ApiType, String> = mapOf(
     ApiType.GROQ to stringResource(R.string.groq),
     ApiType.OLLAMA to stringResource(R.string.ollama),
     ApiType.BEDROCK to stringResource(R.string.bedrock),
+    ApiType.CUSTOM to stringResource(R.string.custom_provider),
     ApiType.LOCAL to stringResource(R.string.local_ai)
 )
 
@@ -27,6 +28,7 @@ fun getPlatformDescriptionResources(): Map<ApiType, String> = mapOf(
     ApiType.GROQ to stringResource(R.string.groq_description),
     ApiType.OLLAMA to stringResource(R.string.ollama_description),
     ApiType.BEDROCK to stringResource(R.string.bedrock_description),
+    ApiType.CUSTOM to stringResource(R.string.custom_provider_description),
     ApiType.LOCAL to stringResource(R.string.local_ai_platform_description)
 )
 
@@ -38,6 +40,7 @@ fun getPlatformAPILabelResources(): Map<ApiType, String> = mapOf(
     ApiType.GROQ to stringResource(R.string.groq_api_key),
     ApiType.OLLAMA to stringResource(R.string.ollama_api_key),
     ApiType.BEDROCK to stringResource(R.string.bedrock_credentials),
+    ApiType.CUSTOM to stringResource(R.string.custom_api_key),
     ApiType.LOCAL to stringResource(R.string.local_ai_model)
 )
 
@@ -49,6 +52,7 @@ fun getPlatformHelpLinkResources(): Map<ApiType, String> = mapOf(
     ApiType.GROQ to stringResource(R.string.groq_api_help),
     ApiType.OLLAMA to stringResource(R.string.ollama_api_help),
     ApiType.BEDROCK to stringResource(R.string.bedrock_api_help),
+    ApiType.CUSTOM to stringResource(R.string.custom_api_help),
     ApiType.LOCAL to stringResource(R.string.local_ai_help)
 )
 
@@ -128,6 +132,7 @@ fun getAPIModelSelectTitle(apiType: ApiType) = when (apiType) {
     ApiType.GROQ -> stringResource(R.string.select_groq_model)
     ApiType.OLLAMA -> stringResource(R.string.select_ollama_model)
     ApiType.BEDROCK -> stringResource(R.string.select_bedrock_model)
+    ApiType.CUSTOM -> "Select Model"
     ApiType.LOCAL -> stringResource(R.string.select_local_model)
 }
 
@@ -139,6 +144,7 @@ fun getAPIModelSelectDescription(apiType: ApiType) = when (apiType) {
     ApiType.GROQ -> stringResource(R.string.select_groq_model_description)
     ApiType.OLLAMA -> stringResource(id = R.string.select_ollama_model_description)
     ApiType.BEDROCK -> stringResource(R.string.select_bedrock_model_description)
+    ApiType.CUSTOM -> "Enter the model name from your provider."
     ApiType.LOCAL -> stringResource(R.string.select_local_model_description)
 }
 
@@ -163,6 +169,7 @@ fun getPlatformSettingTitle(apiType: ApiType) = when (apiType) {
     ApiType.GROQ -> stringResource(R.string.groq_setting)
     ApiType.OLLAMA -> stringResource(R.string.ollama_setting)
     ApiType.BEDROCK -> stringResource(R.string.bedrock_setting)
+    ApiType.CUSTOM -> stringResource(R.string.custom_setting)
     ApiType.LOCAL -> stringResource(R.string.local_ai_setting)
 }
 
@@ -174,6 +181,7 @@ fun getPlatformSettingDescription(apiType: ApiType) = when (apiType) {
     ApiType.GROQ -> stringResource(R.string.platform_setting_description)
     ApiType.OLLAMA -> stringResource(R.string.platform_setting_description)
     ApiType.BEDROCK -> stringResource(R.string.platform_setting_description)
+    ApiType.CUSTOM -> stringResource(R.string.custom_provider_description)
     ApiType.LOCAL -> stringResource(R.string.local_ai_setting_description)
 }
 
@@ -185,5 +193,6 @@ fun getPlatformAPIBrandText(apiType: ApiType) = when (apiType) {
     ApiType.GROQ -> stringResource(R.string.groq_brand_text)
     ApiType.OLLAMA -> stringResource(R.string.ollama_brand_text)
     ApiType.BEDROCK -> stringResource(R.string.bedrock_brand_text)
+    ApiType.CUSTOM -> stringResource(R.string.custom_brand_text)
     ApiType.LOCAL -> stringResource(R.string.local_ai_brand_text)
 }
