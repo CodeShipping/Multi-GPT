@@ -89,6 +89,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -240,6 +241,17 @@ fun ChatScreen(
                 modifier = Modifier.fillMaxSize(),
                 state = listState
             ) {
+            // Welcome / suggestion chips when chat is empty
+            if (groupedMessages.isEmpty() && isIdle) {
+                item(key = "welcome") {
+                    WelcomeSuggestions(
+                        onSuggestionClick = { suggestion ->
+                            chatViewModel.updateQuestion(suggestion)
+                        }
+                    )
+                }
+            }
+
             groupedMessages.keys.sorted().forEach { key ->
                 if (key % 2 == 0) {
                     // User
@@ -291,6 +303,9 @@ fun ChatScreen(
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             clipboardManager.setText(AnnotatedString(m.content.trim()))
                                             Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                                        },
+                                        onShareClick = {
+                                            shareText(context, m.content.trim())
                                         },
                                         onRetryClick = { 
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -378,6 +393,9 @@ fun ChatScreen(
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             clipboardManager.setText(AnnotatedString(message.content.trim()))
                                             Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+                                        },
+                                        onShareClick = {
+                                            shareText(context, message.content.trim())
                                         },
                                         onRetryClick = { 
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -958,4 +976,76 @@ fun TypingIndicator(
             )
         }
     }
+}
+
+/**
+ * Welcome section shown when chat is empty — friendly greeting + suggestion chips.
+ */
+@Composable
+private fun WelcomeSuggestions(onSuggestionClick: (String) -> Unit) {
+    val suggestions = listOf(
+        "✍️ Write a birthday message for a friend",
+        "💡 Give me ideas for a weekend trip",
+        "📧 Help me write a professional email",
+        "🍳 Suggest a quick dinner recipe",
+        "📝 Summarize a topic for me",
+        "🤔 Explain something in simple words"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(32.dp))
+        Text(
+            text = "👋 Hi there!",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = "I can help with writing, ideas, learning, and more.\nTap a suggestion or type your own question.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        suggestions.chunked(2).forEach { row ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                row.forEach { suggestion ->
+                    Surface(
+                        onClick = { onSuggestionClick(suggestion.dropWhile { it != ' ' }.trim()) },
+                        shape = RoundedCornerShape(16.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            text = suggestion,
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(12.dp)
+                        )
+                    }
+                }
+                // Fill remaining space if odd number
+                if (row.size == 1) Spacer(modifier = Modifier.weight(1f))
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+/** Launches Android share sheet for the given text — branded with app name for virality. */
+private fun shareText(context: Context, text: String) {
+    val shareBody = "$text\n\n— Shared from MultiGPT"
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "text/plain"
+        putExtra(Intent.EXTRA_TEXT, shareBody)
+    }
+    context.startActivity(Intent.createChooser(intent, "Share response"))
 }

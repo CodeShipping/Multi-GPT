@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AssistChip
@@ -97,6 +98,7 @@ fun OpponentChatBubble(
     timestamp: Long? = null,
     modelName: String? = null,
     onCopyClick: () -> Unit = {},
+    onShareClick: () -> Unit = {},
     onRetryClick: () -> Unit = {}
 ) {
     val cardColor = CardColors(
@@ -146,6 +148,8 @@ fun OpponentChatBubble(
                 Row {
                     if (!isError) {
                         CopyTextChip(onCopyClick)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        ShareTextChip(onShareClick)
                     }
                     if (canRetry) {
                         Spacer(modifier = Modifier.width(8.dp))
@@ -181,6 +185,21 @@ private fun CopyTextChip(onCopyClick: () -> Unit) {
             Icon(
                 imageVector = ImageVector.vectorResource(id = R.drawable.ic_copy),
                 contentDescription = stringResource(R.string.copy_text),
+                modifier = Modifier.size(AssistChipDefaults.IconSize)
+            )
+        }
+    )
+}
+
+@Composable
+private fun ShareTextChip(onShareClick: () -> Unit) {
+    AssistChip(
+        onClick = onShareClick,
+        label = { Text(stringResource(R.string.share)) },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Filled.Share,
+                contentDescription = stringResource(R.string.share),
                 modifier = Modifier.size(AssistChipDefaults.IconSize)
             )
         }

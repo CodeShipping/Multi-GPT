@@ -93,9 +93,10 @@
     <string name="model_icon">Model Icon</string>
     <string name="send">Send</string>
     <string name="copy_text">Copy Text</string>
+    <string name="share">Share</string>
     <string name="retry">Retry</string>
-    <string name="ask_a_question">Ask a question…</string>
-    <string name="some_platforms_disabled">Some APIs are disabled</string>
+    <string name="ask_a_question">Ask me anything…</string>
+    <string name="some_platforms_disabled">Set up a provider in Settings to start chatting</string>
     <string name="openai_brand_text" translatable="false">Powered by OpenAI</string>
     <string name="anthropic_brand_text" translatable="false">Powered by Claude</string>
     <string name="google_brand_text" translatable="false">Powered by Gemini</string>
