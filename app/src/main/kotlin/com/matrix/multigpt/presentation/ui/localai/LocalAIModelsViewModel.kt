@@ -387,11 +387,11 @@ class LocalAIModelsViewModel @Inject constructor(
     private fun estimatePerformance(fileSize: Long): String {
         val sizeGB = fileSize / (1024.0 * 1024.0 * 1024.0)
         return when {
-            sizeGB < 0.5 -> "Very Fast • ~40+ tokens/sec"
-            sizeGB < 1.0 -> "Fast • ~25 tokens/sec"
-            sizeGB < 2.0 -> "Balanced • ~15 tokens/sec"
-            sizeGB < 4.0 -> "Quality • ~10 tokens/sec"
-            else -> "Demanding • ~5 tokens/sec"
+            sizeGB < 0.5 -> "Very Fast"
+            sizeGB < 1.0 -> "Fast"
+            sizeGB < 2.0 -> "Balanced"
+            sizeGB < 4.0 -> "Quality"
+            else -> "Demanding"
         }
     }
 

@@ -422,9 +422,14 @@ private fun ModelCard(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Performance: ${model.performance}",
-                style = MaterialTheme.typography.labelSmall,
+                text = friendlySpeed(model.performance),
+                style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = sizeHint(model.size),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             
             // Download progress
@@ -724,6 +729,28 @@ private fun formatSize(bytes: Long): String {
         bytes < 1024 * 1024 -> "${bytes / 1024} KB"
         bytes < 1024 * 1024 * 1024 -> String.format("%.1f MB", bytes / (1024.0 * 1024.0))
         else -> String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0))
+    }
+}
+
+/** Plain-language speed label (hides "tokens/sec" jargon) from the performance string. */
+private fun friendlySpeed(performance: String): String =
+    when (performance.substringBefore("•").trim().lowercase()) {
+        "very fast" -> "⚡ Very fast replies"
+        "fast" -> "⚡ Fast replies"
+        "balanced" -> "👍 Good mix of speed & quality"
+        "quality" -> "✨ Higher quality, a bit slower"
+        "demanding" -> "🐢 Best quality, needs a powerful phone"
+        else -> performance
+    }
+
+/** Plain-language hint about download size / device suitability. */
+private fun sizeHint(bytes: Long): String {
+    val gb = bytes / (1024.0 * 1024.0 * 1024.0)
+    return when {
+        gb < 0.5 -> "Small download · works on almost any phone"
+        gb < 1.5 -> "Medium download · works on most phones"
+        gb < 3.0 -> "Large download · needs a recent phone"
+        else -> "Very large · needs a powerful phone"
     }
 }
 
