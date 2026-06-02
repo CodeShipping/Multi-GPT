@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Memory
+import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
@@ -61,6 +62,11 @@ fun LocalAIModelsScreen(
     val importProgress by viewModel.importProgress.collectAsStateWithLifecycle()
     
     var showDeleteDialog by remember { mutableStateOf<ModelInfo?>(null) }
+    var showSourcesSheet by remember { mutableStateOf(false) }
+
+    if (showSourcesSheet) {
+        ModelSourcesSheet(onDismiss = { showSourcesSheet = false })
+    }
 
     // File picker launcher for importing GGUF files
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -84,6 +90,9 @@ fun LocalAIModelsScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showSourcesSheet = true }) {
+                        Icon(Icons.Filled.Public, contentDescription = "Model sources")
+                    }
                     IconButton(
                         onClick = onNavigateToSettings
                     ) {
