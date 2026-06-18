@@ -123,6 +123,16 @@ object BillingManager {
     }
 
     fun purchase(activity: Activity, sku: String, callback: ((Boolean) -> Unit)? = null) {
+        // In debug builds, fake a successful purchase immediately
+        if (com.matrix.multigpt.BuildConfig.DEBUG) {
+            Log.d(TAG, "DEBUG: Faking purchase for $sku")
+            val ctx = activity.applicationContext
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                .edit().putBoolean(PREF_AD_FREE, true).apply()
+            callback?.invoke(true)
+            return
+        }
+
         onPurchaseComplete = callback
         val details = productDetailsCache[sku]
         if (details == null) {
@@ -236,6 +246,19 @@ object BillingManager {
     fun isAdFree(context: Context): Boolean {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .getBoolean(PREF_AD_FREE, false)
+    }
+
+    /**
+     * DEBUG ONLY: Toggle ad-free purchase state without real billing.
+     * Does nothing in release builds.
+     */
+    fun debugTogglePurchase(context: Context): Boolean {
+        if (!com.matrix.multigpt.BuildConfig.DEBUG) return isAdFree(context)
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val newState = !prefs.getBoolean(PREF_AD_FREE, false)
+        prefs.edit().putBoolean(PREF_AD_FREE, newState).apply()
+        Log.d(TAG, "DEBUG: ad_free toggled to $newState")
+        return newState
     }
 
     /** Localized, currency-correct price string from Google Play (e.g. "$2.99"). Null if not yet loaded. */
