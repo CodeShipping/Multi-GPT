@@ -64,7 +64,7 @@ jobs:
           }' > app/google-services.json
 
       - name: Setup AdMob config for CI
-        run: cp app/src/main/res/values/ad_mob_config.xml.example app/src/main/res/values/ad_mob_config.xml
+        run: cp ad_mob_config.xml.example app/src/main/res/values/ad_mob_config.xml
 
       - name: Build Unsigned Release APK
         run: ./gradlew assembleRelease

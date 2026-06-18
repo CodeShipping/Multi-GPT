@@ -136,7 +136,7 @@ If building from source, you can add your own `google-services.json` for Firebas
 ### AdMob Configuration (Optional)
 For ads, copy the example config and replace with your real IDs:
 ```bash
-cp app/src/main/res/values/ad_mob_config.xml.example app/src/main/res/values/ad_mob_config.xml
+cp ad_mob_config.xml.example app/src/main/res/values/ad_mob_config.xml
 ```
 Then edit `ad_mob_config.xml` with your AdMob unit IDs. The example file uses [Google's test IDs](https://developers.google.com/admob/android/test-ads) which are safe for development.
 
