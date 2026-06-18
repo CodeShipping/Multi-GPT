@@ -15,7 +15,7 @@ A native Android app for chatting with multiple AI models simultaneously.
 
 ## Overview
 
-MultiGPT allows users to communicate with multiple AI providers (OpenAI, Anthropic, Google, Groq, AWS Bedrock, Ollama) within a single conversation interface. Built with modern Android development practices using Kotlin, Jetpack Compose, and MVVM architecture.
+MultiGPT allows users to communicate with multiple AI providers (OpenAI, Anthropic, Google, Groq, AWS Bedrock, Ollama) within a single conversation interface — plus **on-device local inference** powered by [llama-kotlin-android](https://github.com/it5prasoon/llama-kotlin-android). Built with modern Android development practices using Kotlin, Jetpack Compose, and MVVM architecture.
 
 ## 📱 Screenshots
 
@@ -26,9 +26,14 @@ MultiGPT allows users to communicate with multiple AI providers (OpenAI, Anthrop
 |:---------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------:|:------------------------------------------------------------------------------------------------:|
 | <img src="metadata/en-US/images/phoneScreenshots/1-get-started.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/2-get-started-select-provider.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/6-provider-config.png" width="200"/> |
 
-|                                 Chat List                                 |                                   Chat Screen                                   |                                  Settings                                   |
+### Chat & Local Inference
+|                                 Chat List                                 |                                   Chat with Agent                                   |                                  Chat Prompt                                   |
 |:-------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------:|:------------------------------------------------------------------------------:|
-| <img src="metadata/en-US/images/phoneScreenshots/3-chat-list.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/4-chat-screen.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/5-settings.png" width="200"/> |
+| <img src="metadata/en-US/images/phoneScreenshots/3-chat-list.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/4-10-chat-agent.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/4-11-chat-prompt.png" width="200"/> |
+
+|                                  Local Provider                                   |                                  Settings                                   |
+|:---------------------------------------------------------------------------------:|:------------------------------------------------------------------------------:|
+| <img src="metadata/en-US/images/phoneScreenshots/6-5-local-provider.png" width="200"/> | <img src="metadata/en-US/images/phoneScreenshots/5-settings.png" width="200"/> |
 
 </div>
 
@@ -59,7 +64,42 @@ app/src/main/kotlin/com/matrix/multigpt/
 │   ├── theme/            # Material Design 3 theming
 │   └── ui/               # Feature-specific UI screens
 └── util/                 # Utility classes and extensions
+
+localinference/src/main/kotlin/com/matrix/multigpt/localinference/
+├── data/                 # Model catalog, downloads, storage
+├── di/                   # Hilt module for local inference
+├── presentation/         # Model selection UI
+├── service/              # Inference engine & conversation summarizer
+└── LocalInferenceProvider.kt  # Provider integration
 ```
+
+## 🧠 Local Inference
+
+MultiGPT supports **fully offline AI inference** directly on your Android device — no API keys, no internet, complete privacy.
+
+### How it works
+
+The `localinference` module uses [llama-kotlin-android](https://github.com/it5prasoon/llama-kotlin-android) to run GGUF models natively on-device via llama.cpp:
+
+- **Browse & download models** from a curated catalog (fetched from Firebase)
+- **Run inference locally** with streaming token generation
+- **Conversation summarization** to manage context within device memory limits
+- **No API key required** — works completely offline after model download
+
+### Supported Local Models
+
+| Model | Size | Best For |
+|-------|------|----------|
+| Phi-3.5-mini | ~2.4GB | General assistant |
+| TinyLlama-1.1B | ~670MB | Low-end devices |
+| Qwen2.5-1.5B | ~1GB | Coding, reasoning |
+| Llama-3.2-3B | ~2GB | High quality chat |
+
+### Requirements for Local Inference
+
+- Android 12+ (API 31)
+- 4GB+ RAM recommended
+- arm64-v8a architecture
 
 ## Development Setup
 
@@ -94,15 +134,11 @@ If building from source, you can add your own `google-services.json` for Firebas
 3. Place it in `app/` directory
 
 ### AdMob Configuration (Optional)
-For ads, create `app/src/main/res/values/ad_mob_config.xml`:
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="admob_app_id">your_admob_app_id</string>
-    <string name="home_banner">your_banner_ad_id</string>
-    <string name="setup_complete_interstitial">your_interstitial_ad_id</string>
-</resources>
+For ads, copy the example config and replace with your real IDs:
+```bash
+cp app/src/main/res/values/ad_mob_config.xml.example app/src/main/res/values/ad_mob_config.xml
 ```
+Then edit `ad_mob_config.xml` with your AdMob unit IDs. The example file uses [Google's test IDs](https://developers.google.com/admob/android/test-ads) which are safe for development.
 
 ## API Integration
 
@@ -115,6 +151,7 @@ The app integrates with multiple AI providers through their REST APIs:
 - **Groq**: Llama 3.1, Llama 3.2, Gemma 2
 - **AWS Bedrock**: Multiple foundation models from various providers
 - **Ollama**: Local AI models via self-hosted API
+- **Local Inference** 🆕: On-device models via [llama-kotlin-android](https://github.com/it5prasoon/llama-kotlin-android) — no internet required
 
 ### Dynamic Model Fetching
 The app automatically discovers available models from each provider:
