@@ -90,9 +90,9 @@ object BillingManager {
             )
             .build()
 
-        billingClient?.queryProductDetailsAsync(params) { result, details ->
+        billingClient?.queryProductDetailsAsync(params) { result, detailsResult ->
             if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                details.forEach { productDetailsCache[it.productId] = it }
+                detailsResult.productDetailsList.forEach { productDetailsCache[it.productId] = it }
             } else {
                 Log.w(TAG, "queryProducts failed: ${result.debugMessage}")
             }
