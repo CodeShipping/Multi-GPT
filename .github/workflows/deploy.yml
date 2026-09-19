@@ -1,0 +1,58 @@
+name: Deploy to Play Store
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build & Upload to Internal Track
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "gradle"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Ruby (for Fastlane)
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Install Fastlane
+        run: gem install fastlane
+
+      # multigpt needs a google-services.json + AdMob config to compile, but
+      # both are gitignored (public repo). Provide the CI stand-ins.
+      - name: Decode google-services.json
+        run: echo "${{ secrets.GOOGLE_SERVICES_JSON }}" | base64 -d > app/google-services.json
+
+      - name: Setup AdMob config for CI
+        run: cp ad_mob_config.xml.example app/src/main/res/values/ad_mob_config.xml
+
+      - name: Decode keystore
+        run: echo "${{ secrets.APP_KEYSTORE }}" | base64 -d > keystore.jks
+
+      - name: Decode Play Store key
+        run: |
+          mkdir -p fastlane
+          echo "${{ secrets.PLAY_STORE_KEY_JSON }}" | base64 -d > fastlane/play-store-key.json
+
+      - name: Build & Upload to Internal Track
+        env:
+          KEYSTORE_PATH: "../keystore.jks"
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: fastlane internal

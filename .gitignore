@@ -61,6 +61,8 @@ fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
 fastlane/readme.md
+fastlane/play-store-key.json
+.env
 
 # Lint
 lint/intermediates/

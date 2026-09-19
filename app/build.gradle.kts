@@ -41,8 +41,27 @@ android {
         generateLocaleConfig = true
     }
 
+    // Release signing is only wired up when KEYSTORE_PATH is provided (e.g. the
+    // fastlane deploy workflow). Without it, release builds stay unsigned so the
+    // existing post-signing CI (release-build.yml) keeps working.
+    val releaseKeystore = System.getenv("KEYSTORE_PATH")
+    signingConfigs {
+        create("release") {
+            if (releaseKeystore != null && file(releaseKeystore).exists()) {
+                storeFile = file(releaseKeystore)
+                // multigpt uses one password for both the store and the key.
+                storePassword = System.getenv("KEYSTORE_PASSWORD") ?: System.getenv("KEY_PASSWORD") ?: ""
+                keyAlias = System.getenv("KEY_ALIAS") ?: ""
+                keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (releaseKeystore != null && file(releaseKeystore).exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = true
             @file:Suppress("UnstableApiUsage")
             vcsInfo.include = false
