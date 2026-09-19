@@ -24,6 +24,10 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # Skip the default install of the removed 'tools' package (exit 1 on
+          # current SDK repos). AGP fetches the build-tools/platforms it needs.
+          packages: ""
 
       - name: Set up Ruby (for Fastlane)
         uses: ruby/setup-ruby@v1
